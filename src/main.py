@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -6,16 +7,13 @@ if getattr(sys, 'frozen', False):
     browsers_path = os.path.join(sys._MEIPASS, 'ms-playwright')
     os.environ['PLAYWRIGHT_BROWSERS_PATH'] = browsers_path
 
-from PySide6.QtCore import Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
-from models.data_classes import User
 from models.database import DataManager
 from services.logging_config import get_logger, setup_logging_with_env
 from services.session import session_manager
-from settings.config import API_ENDPOINT, API_CW_ENDPOINT
-from views.pages.auth import LoginWindow
+from settings.config import API_ENDPOINT, DEMO_PASSWORD, DEMO_USERNAME
 from views.pages.home import MainWindow
 import asset
 
@@ -28,65 +26,35 @@ class ApplicationController:
     def __init__(self):
         logger.info("Initializing TestAgent application")
         self.db = DataManager(
-            "agent_local_storage.db", 
-            API_ENDPOINT, 
-            API_CW_ENDPOINT,
+            "agent_local_storage.db",
+            API_ENDPOINT,
             use_api=True
         )
-
         self.script_dir = os.path.dirname(__file__)
         self.icon_path = os.path.join(self.script_dir, "theme", "icon", "favicon.ico")
-        # Check if user is already authenticated via session
-        if session_manager.is_authenticated():
-            user_info = session_manager.get_user_info()
-            if user_info:
-                logger.info("User already logged in: %s", user_info.get("username"))
-                self.main_window = MainWindow(self.db)
-                if os.path.exists(self.icon_path):
-                    window_icon = QIcon(self.icon_path)
-                    self.main_window.setWindowIcon(window_icon)
-                    logger.info("Window icon set from: %s", self.icon_path)
-                else:
-                    logger.warning("Window icon file not found at: %s", self.icon_path)
-                self.main_window.set_user_info(user_info)
-                self.main_window.show()
-                self.login_window = None
-                return
-        logger.info("Login window initialized")
+        self.main_window = None
 
-        # User is not authenticated, show login window
-        self.login_window = LoginWindow(self.db)
-        self.main_window = MainWindow(self.db)
-        self.login_window.login_success.connect(self.show_main_window)
-
-    def run(self):
+    def run(self) -> bool:
+        """Không có màn hình đăng nhập: tự đăng nhập server bằng tài khoản demo rồi mở thẳng màn hình chính."""
         logger.info("Running TestAgent application")
-        if self.login_window is not None:
-            if os.path.exists(self.icon_path):
-                window_icon = QIcon(self.icon_path)
-                self.login_window.setWindowIcon(window_icon)
-                logger.info("Window icon set from: %s", self.icon_path)
-            else:
-                logger.warning("Window icon file not found at: %s", self.icon_path)
-            self.login_window.show()
+        if not asyncio.run(self.db.auto_login(DEMO_USERNAME, DEMO_PASSWORD)):
+            QMessageBox.critical(
+                None,
+                "Không kết nối được server",
+                f"Không đăng nhập được vào server tại {API_ENDPOINT}.\n\n"
+                "Hãy kiểm tra server đã chạy (python main.py trong KiemDinhPhanMem_server) "
+                "và MongoDB đang bật.",
+            )
+            return False
 
-    @Slot(User)
-    def show_main_window(self, user: User):
-        logger.info(
-            "Login successful for user: '%s'. Showing main window.",
-            user.get("username"),
-        )
-
-        self.main_window.set_user_info(user)
+        self.main_window = MainWindow(self.db)
         if os.path.exists(self.icon_path):
-            window_icon = QIcon(self.icon_path)
-            self.main_window.setWindowIcon(window_icon)
-            logger.info("Window icon set from: %s", self.icon_path)
+            self.main_window.setWindowIcon(QIcon(self.icon_path))
         else:
             logger.warning("Window icon file not found at: %s", self.icon_path)
+        self.main_window.set_user_info(session_manager.get_user_info() or {"username": DEMO_USERNAME})
         self.main_window.show()
-        if self.login_window:
-            self.login_window.close()
+        return True
 
 
 if __name__ == "__main__":
@@ -99,7 +67,8 @@ if __name__ == "__main__":
     asset.apply_style(app)
 
     controller = ApplicationController()
-    controller.run()
+    if not controller.run():
+        sys.exit(1)
 
     logger.info("Application started successfully")
     sys.exit(app.exec())

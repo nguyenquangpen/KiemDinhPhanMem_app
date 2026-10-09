@@ -55,15 +55,3 @@ class AuthService(BaseAPI):
         else:
             logger.warning("Failed to retrieve user info")
         return result
-    
-class CwAuthService(BaseAPI):
-
-    async def CWlogin(self, email, password):
-        logger.info("Attempting login to cw for user: %s", email)
-        data = {"email": email, "password": password}
-        result = await self.post("api/v1/auth/login", data=data)
-        if result and result.get("success"):
-            logger.info("Co-well API login successful for user: %s", email)
-        else:
-            logger.warning("Co-well API login failed for user: %s", email)
-        return result

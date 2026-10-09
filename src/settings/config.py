@@ -20,8 +20,10 @@ load_dotenv()
 
 # Get environment variables with default values
 API_ENDPOINT = os.getenv("API_ENDPOINT", "http://localhost:8765")
-API_CW_ENDPOINT = os.getenv("API_CW_ENDPOINT")
 WS_ENDPOINT = os.getenv("WS_ENDPOINT", "ws://localhost:8765")
+# App không có màn hình đăng nhập: tự đăng nhập server bằng tài khoản này (chưa có thì tự đăng ký)
+DEMO_USERNAME = os.getenv("DEMO_USERNAME", "demo")
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo123456")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 TIMEZONE = os.getenv("TIMEZONE", "UTC").strip('"')  # Remove quotes if present

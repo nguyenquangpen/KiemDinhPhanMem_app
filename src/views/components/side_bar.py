@@ -116,7 +116,6 @@ class SidebarWidget(QWidget):
     """Main sidebar widget that controls navigation"""
 
     page_changed = Signal(str)
-    logout_requested = Signal()
     setting_requested = Signal()
 
     def __init__(self, structure):
@@ -140,7 +139,6 @@ class SidebarWidget(QWidget):
         self.ui.settingButton.clicked.connect(self._handle_setting_click)
         self.ui.openMinimizeButton.clicked.connect(self.toggle_sidebar)
         self.ui.feedbackButton.clicked.connect(self._handle_feedback_click)
-        self._setup_logout_functionality()
         self._update_setting_logout_minimize_buttons()
 
     def setup_tree_widget(self):
@@ -402,9 +400,10 @@ class SidebarWidget(QWidget):
     def _update_setting_logout_minimize_buttons(self):
         self.ui.settingButton.setVisible(True)
         # Handle things
+        # Không có đăng nhập nên ẩn nút Logout
+        self.ui.collapsedLogoutButton.setVisible(False)
+        self.ui.openLogoutButton.setVisible(False)
         if self.is_collapsed:
-            self.ui.collapsedLogoutButton.setVisible(True)
-            self.ui.openLogoutButton.setVisible(False)
 
             self.ui.openMinimizeButton.setVisible(False)
             self.ui.collapsedMinimizeButton.setVisible(True)
@@ -418,9 +417,6 @@ class SidebarWidget(QWidget):
             )
             self.ui.feedbackButton.setText("")
         else:
-            self.ui.collapsedLogoutButton.setVisible(False)
-            self.ui.openLogoutButton.setVisible(True)
-
             self.ui.openMinimizeButton.setVisible(True)
             self.ui.collapsedMinimizeButton.setVisible(False)
 
@@ -433,26 +429,6 @@ class SidebarWidget(QWidget):
             )
             self.ui.feedbackButton.setText("Feedback")
             self.ui.controlContainerLayout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    def _setup_logout_functionality(self):
-        """Set up logout button functionality"""
-        self.ui.openLogoutButton.clicked.connect(self._handle_logout_click)
-        self.ui.collapsedLogoutButton.clicked.connect(self._handle_logout_click)
-        logger.debug("Logout button connected")
-
-    def _handle_logout_click(self):
-        """Handle logout button click"""
-        reply = QMessageBox.question(
-            self,
-            "Logout",
-            "Are you sure you want to logout?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            logger.info("User confirmed logout")
-            self.logout_requested.emit()
 
     def _handle_setting_click(self):
         """Handle setting button click"""

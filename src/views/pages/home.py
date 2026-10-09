@@ -1,5 +1,4 @@
 # my_app/views/home.py
-import asyncio
 from typing import Union
 
 from PySide6.QtCore import Slot
@@ -95,7 +94,6 @@ class MainWindow(QMainWindow):
     def _connect_signals(self):
         logger.info("Connecting signals for MainWindow")
         self.sidebar_widget.page_changed.connect(self._on_tab_selected)
-        self.sidebar_widget.logout_requested.connect(self._handle_logout)
         self.sidebar_widget.setting_requested.connect(self._handle_setting_click)
         self.db.signals.current_project_changed.connect(self.sidebar_widget.on_project_changed)
 
@@ -308,48 +306,6 @@ class MainWindow(QMainWindow):
                 logger.debug(f"Refreshing {key} after project edit")
                 w.refresh_project_data()
 
-
-    @Slot()
-    def _handle_logout(self):
-        """Handle logout request from sidebar"""
-        logger.info("Logout requested by user")
-
-        # Create a worker thread to handle async logout
-        from PySide6.QtCore import QThread
-
-        class LogoutWorker(QThread):
-            def __init__(self, db_manager):
-                super().__init__()
-                self.db_manager = db_manager
-
-            def run(self):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(self.db_manager.logout_user())
-                finally:
-                    loop.close()
-
-        # Perform logout
-        worker = LogoutWorker(self.db)
-        worker.start()
-        worker.wait()  # Wait for logout to complete
-
-        logger.info("User logged out, restarting application")
-
-        # Close current window and restart the application
-        self.close()
-
-        # Import here to avoid circular imports
-        from PySide6.QtWidgets import QApplication
-
-        from main import ApplicationController
-
-        # Create new application controller (which will show login if needed)
-        app = QApplication.instance()
-        if app:
-            controller = ApplicationController()
-            controller.run()
 
     def _handle_setting_click(self):
         """Handle setting button click"""

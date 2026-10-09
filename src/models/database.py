@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtCore import Signal as Signal
 
 from models.data_classes import Project, Task, User, ViewpointType
-from services.api.auth import AuthService, CwAuthService
+from services.api.auth import AuthService
 from services.api.project import ProjectService
 from services.api.tasks import TaskService
 from services.api.template import TemplateService
@@ -67,7 +67,6 @@ class DataManager:
         self,
         db_path: str,
         api_endpoint: Optional[str] = None,
-        auth_api_endpoint: Optional[str] = None,
         use_api: bool = False,
     ):
         logger.info(
@@ -98,7 +97,6 @@ class DataManager:
 
         if self.use_api and api_endpoint:
             logger.info("Initializing API services with endpoint: %s", api_endpoint)
-            self.cw_auth_service = CwAuthService(auth_api_endpoint)
             self.auth_service = AuthService(api_endpoint)
             self.project_service = ProjectService(api_endpoint)
             self.testcase_service = TestCaseService(api_endpoint)
@@ -590,54 +588,17 @@ class DataManager:
 
     # --- Authentication Methods ---
 
-    async def hybrid_authenticate(self, email: str, password: str) -> bool:
+    async def auto_login(self, username: str, password: str) -> bool:
         """
-        Coordinates the hybrid authentication flow.
-        Returns True on complete success, False otherwise.
+        Đăng nhập thẳng vào server bằng tài khoản demo (không có màn hình login).
+        Tài khoản chưa tồn tại trên server thì tự đăng ký rồi đăng nhập lại.
         """
-        logger.info("Starting hybrid authentication for: %s", email)
-
-        if not (self.use_api and self.cw_auth_service):
-            logger.error("Co-well AuthService is not configured.")
-            return False
-
-        try:
-            cw_login = await self.cw_auth_service.CWlogin(email, password)
-            if not cw_login:
-                logger.warning(
-                    "Authentication failed at Co-well API for user: %s", email
-                )
-                return False
-        except Exception as e:
-            logger.error(
-                "An exception occurred during Co-well authentication: %s",
-                e,
-                exc_info=True,
-            )
-            return False
-
-        username = cw_login.get("user", {}).get("user_name", email)
-
-        # Try to authenticate against Agent API
-        is_agent_user = await self.authenticate_user(username, password)
-        if is_agent_user:
-            logger.info("User already exists on Agent system and is now logged in.")
+        if await self.authenticate_user(username, password):
             return True
-
-        # If not an agent user, register them
-        was_registered = await self.register_user(username, password)
-        if not was_registered:
-            logger.error("Failed to register new user '%s' on Agent system.", username)
+        logger.info("Demo user '%s' not found on server, registering", username)
+        if not await self.register_user(username, password):
             return False
-
-        # login agent after successfull registration
-        final_login = await self.authenticate_user(username, password)
-        if not final_login:
-            logger.critical(
-                "CRITICAL: Registered user '%s' but could not log in.", username
-            )
-
-        return final_login
+        return await self.authenticate_user(username, password)
 
     async def authenticate_user(self, username: str, password: str) -> bool:
         """
