@@ -31,8 +31,10 @@ from PySide6.QtWidgets import (
 from models.data_classes import Project
 from models.database import DataManager
 from services.logging_config import get_logger
+from services.field_locators import get_task_locators
+from services.quick_runner import run_quick_testcase
 from services.session import session_manager
-from settings.config import WS_ENDPOINT
+from settings.config import API_ENDPOINT, WS_ENDPOINT
 
 # from ui.build.ui_screenshot_viewer import Ui_ScreenshotViewer
 from views.components.screenshot_gallery_widget import ScreenshotGalleryWidget
@@ -246,11 +248,26 @@ class TestCaseMainWorker(QThread):
                     "checkpoint_data": checkpoint_data,
                 }
 
-                self.current_task = asyncio.create_task(
-                    self.runner_service.execute_single_test(
-                        full_context, on_step_update=self._on_step_change
+                # Task đã chọn field trên trang -> chạy runner cố định (không cần agent LLM duyệt DOM)
+                locators = get_task_locators(task_uuid) if task_uuid else None
+                if locators and task_data:
+                    logger.info("Quick run (picked fields) for test case: %s", test_name)
+                    self.current_task = asyncio.create_task(
+                        run_quick_testcase(
+                            clean_test_case,
+                            task_data,
+                            locators,
+                            API_ENDPOINT,
+                            session_manager.get_access_token(),
+                            headless=headless_mode,
+                        )
                     )
-                )
+                else:
+                    self.current_task = asyncio.create_task(
+                        self.runner_service.execute_single_test(
+                            full_context, on_step_update=self._on_step_change
+                        )
+                    )
                 result = await self.current_task
 
                 # Enhanced status handling for WebSocket communication

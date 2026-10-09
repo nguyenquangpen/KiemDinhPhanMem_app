@@ -22,6 +22,8 @@ from models.data_classes import Spec, Task, Viewpoint, ViewpointType
 
 # Assuming the provided context files are in these locations
 from models.database import DataManager
+from services.element_picker import pick_elements
+from services.field_locators import get_task_locators, save_task_locators
 from services.logging_config import get_logger
 from views.components.add_choices_widget import MutableListWidget
 from views.components.input_card import InputCard, InputCardConfig, InputType
@@ -127,6 +129,23 @@ class DbModificationWorker(QObject):
         except Exception as e:
             logger.error(f"DB modification failed: {e}")
             self.finished.emit(False, str(e))
+
+
+class ElementPickerWorker(QThread):
+    """Mở trình duyệt cho người dùng click chọn từng field + nút Submit (blocking nên chạy ở thread riêng)."""
+    finished_picking = Signal(object, str)  # list locator (cùng thứ tự labels), error message
+
+    def __init__(self, url: str, labels: List[str]):
+        super().__init__()
+        self.url = url
+        self.labels = labels
+
+    def run(self):
+        try:
+            self.finished_picking.emit(pick_elements(self.url, self.labels), "")
+        except Exception as e:
+            logger.error(f"Element picking failed: {e}", exc_info=True)
+            self.finished_picking.emit([], str(e))
 
 
 class TaskCreatorWorker(QObject):
@@ -693,9 +712,67 @@ class TaskWidget(QWidget):
         delete_button.setObjectName("RedButton")
         delete_button.clicked.connect(partial(self._delete_task, row_index))
 
+        pick_button = QPushButton("🎯 Chọn field")
+        pick_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        pick_button.clicked.connect(partial(self._handle_pick_fields, row_index))
+        if row_index < len(self.current_tasks) and self.current_tasks[row_index]:
+            locators = get_task_locators(self.current_tasks[row_index].task_id)
+            pick_button.setToolTip(
+                f"Đã chọn {len(locators['fields'])} field - testcase sẽ chạy nhanh không cần agent"
+                if locators
+                else "Click chọn từng field trên trang để chạy testcase nhanh, chính xác hơn"
+            )
+
         layout.addWidget(gen_button)
+        layout.addWidget(pick_button)
         layout.addWidget(delete_button)
         return actions_widget
+
+    def _handle_pick_fields(self, row_index):
+        task = self.current_tasks[row_index] if row_index < len(self.current_tasks) else None
+        if not task or not task.task_id:
+            QMessageBox.warning(self, "Error", "Could not find task details.")
+            return
+        if not task.url_test:
+            QMessageBox.warning(self, "Thiếu URL", "Task chưa có URL cần test.")
+            return
+        if not task.specs:
+            QMessageBox.warning(self, "Chưa có field", "Hãy thêm specifications (field) cho task trước.")
+            return
+
+        labels = [f"{i}. {spec.name}" for i, spec in enumerate(task.specs, start=1)] + ["Nút Submit / Lưu"]
+        QMessageBox.information(
+            self,
+            "Chọn field trên trang",
+            "Trình duyệt sẽ mở trang cần test. Click lần lượt vào từng field theo thanh đỏ phía trên:\n\n"
+            + "\n".join(labels)
+            + "\n\n• F2: tạm tắt chế độ chọn (để đăng nhập / mở popup), nhấn lại để chọn tiếp"
+            "\n• Esc: bỏ qua field hiện tại",
+        )
+
+        self._picker_worker = ElementPickerWorker(task.url_test, labels)
+        self._picker_worker.finished_picking.connect(partial(self._on_fields_picked, task))
+        self._picker_worker.start()
+
+    def _on_fields_picked(self, task: Task, picked: list, error: str):
+        if error:
+            QMessageBox.critical(self, "Lỗi", f"Không chọn được field: {error}")
+            return
+
+        field_picks, submit = picked[:-1], picked[-1]
+        fields = {spec.name: loc for spec, loc in zip(task.specs, field_picks) if loc}
+        if not fields:
+            QMessageBox.warning(self, "Chưa chọn", "Chưa chọn field nào, không lưu.")
+            return
+        save_task_locators(task.task_id, fields, submit)
+
+        summary = [
+            f"{i}. {spec.name}  →  {loc['desc'] if loc else '(bỏ qua)'}"
+            for i, (spec, loc) in enumerate(zip(task.specs, field_picks), start=1)
+        ]
+        summary.append(f"Submit  →  {submit['desc'] if submit else '(bỏ qua)'}")
+        QMessageBox.information(self, "Đã lưu field", "\n".join(summary))
+        self._load_tasks_in_background()
 
     def _handle_generate_testcase(self, row_index):
         logger.info(f"Generate testcase for row {row_index}")
@@ -856,12 +933,12 @@ class TaskWidget(QWidget):
         self.tasks_columns = [
             SelectColumnConfig(header="", select_type=SelectType.SINGLE),
             TextColumnConfig(header="Task ID", editable=False, default_width=0.2),
-            TextColumnConfig(header="Task Name", editable=False, default_width=0.5),
+            TextColumnConfig(header="Task Name", editable=False, default_width=0.4),
             ActionColumnConfig(
                 header="Actions",
                 editable=False,
                 widget_factory=self._create_btn_task_actions,
-                default_width=0.15,
+                default_width=0.25,
             ),
         ]
         self.tasks_model = TableModel([])

@@ -100,3 +100,7 @@ ui/node_modules/
 ersnguyennc7304Projectcowelltestagent-tool.venvScriptsactivate.bat
 code_example/
 screenshots/
+
+# Field đã chọn trên trang + profile trình duyệt test (cookie đăng nhập web cần test)
+field_locators.json
+.test_browser_profile/

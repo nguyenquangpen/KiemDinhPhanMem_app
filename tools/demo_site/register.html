@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo - Đăng ký tài khoản</title>
+  <style>
+    body { font-family: sans-serif; max-width: 420px; margin: 60px auto; }
+    label { display: block; margin-top: 12px; }
+    input { width: 100%; padding: 6px; box-sizing: border-box; }
+    .error { color: #c62828; font-size: 13px; min-height: 16px; }
+    .toast { margin-top: 16px; padding: 10px; background: #2e7d32; color: #fff; display: none; }
+    button { margin-top: 16px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <!-- Trang mẫu để demo chọn field + runner nhanh: python -m http.server 8000 -d tools/demo_site -->
+  <h2>Đăng ký tài khoản</h2>
+  <form id="form" novalidate>
+    <label for="username">Username</label>
+    <input id="username" name="username" placeholder="3-20 ký tự, chữ và số">
+    <div class="error" id="username-error"></div>
+
+    <label for="email">Email</label>
+    <input id="email" name="email" placeholder="you@example.com">
+    <div class="error" id="email-error"></div>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" placeholder="Tối thiểu 6 ký tự">
+    <div class="error" id="password-error"></div>
+
+    <button type="submit">Đăng ký</button>
+  </form>
+  <div class="toast" id="toast" role="status">Đăng ký thành công!</div>
+
+  <script>
+    const rules = {
+      username: (v) => !v ? 'Username là bắt buộc' : !/^[A-Za-z0-9]{3,20}$/.test(v) ? 'Username chỉ gồm chữ, số và dài 3-20 ký tự' : '',
+      email: (v) => !v ? 'Email là bắt buộc' : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? 'Email không đúng định dạng' : '',
+      password: (v) => !v ? 'Password là bắt buộc' : v.length < 6 ? 'Password tối thiểu 6 ký tự' : '',
+    };
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      let ok = true;
+      for (const [name, check] of Object.entries(rules)) {
+        const msg = check(document.getElementById(name).value);
+        document.getElementById(name + '-error').textContent = msg;
+        if (msg) ok = false;
+      }
+      document.getElementById('toast').style.display = ok ? 'block' : 'none';
+    });
+  </script>
+</body>
+</html>
