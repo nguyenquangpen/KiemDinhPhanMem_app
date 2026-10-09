@@ -155,14 +155,3 @@ After you have built the application with the command above, you can package the
 - Easy to extend, maintain, and scale.
 
 ---
-
-## 🧑‍💻 Author
-
-TuyenDV – R&D AI Team Leader
-NguyenNC – R&D Fullstack Developer
-
----
-
-## 📄 License
-
-> CO-WELL Asia License
