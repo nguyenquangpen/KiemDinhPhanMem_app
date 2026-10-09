@@ -1,0 +1,106 @@
+/* --- Green Button --- */
+
+/* edit, add, save: Green
+    delete : Red
+    view, run : Blue
+    back: Gray
+*/
+
+QPushButton#GreenButton {
+    background-color: #56BB55;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#GreenButton:hover {
+    background-color: #4CAA4C;
+}
+QPushButton#GreenButton:disabled {
+    background-color: #CCCCCC;
+}
+
+/* --- Blue Button --- */
+QPushButton#BlueButton {
+    background-color: #4A90E2;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#BlueButton:hover {
+    background-color: #357abd;
+}
+
+/* --- Red Button --- */
+QPushButton#RedButton {
+    background-color: #F48080;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#RedButton:hover {
+    background-color: #e06c6c;
+}
+
+/* --- Gray Button --- */
+QPushButton#GrayButton {
+    background-color: #A6A6A6;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#GrayButton:hover {
+    background-color: #8C8C8C;
+}
+
+/* Pagination Button */
+QPushButton#PageNavButton {
+    background-color: #BFBFBF;
+    color: #203532;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#PageNavButton:hover {
+    background-color: #A6A6A6;
+    color: #FFFFFF;
+}
+QPushButton#PageNavButton:disabled {
+    background-color: #E0E0E0;
+    color: #AAAAAA;
+}
+
+/*--------- table bottom -----------*/    
+QPushButton#PageButton {
+    background-color: #FFFFFF;
+    color: #203532;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#PageButton:hover {
+    background-color: #e4e0e0ff;
+}
+
+QPushButton#ActivePageButton {
+    background-color: #56BB55;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+}

@@ -1,0 +1,102 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment variables
+.venv/
+.env/
+venv/
+# PyInstaller
+#  Usually these files are created by PyInstaller in a sub-directory.
+#  If you run PyInstaller in your project root, uncomment the following
+*.spec
+*.pyzw
+
+
+# --- Virtual Environments ---
+# It's a best practice to never commit your virtual environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+config.ini
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Optional npm cache directory
+.npm
+
+# Documentation
+docs/_build/
+# Optional eslint cache
+.eslintcache
+
+# Agent-specific files (if applicable)
+*.agent
+agents/temp/
+test-results/
+App.spec
+
+# python environment
+__pycache__/
+.github/
+*.code-workspace
+*.pyc
+
+# ui build
+ui/test/
+ui/build/
+ui/dist/
+resources_rc.py
+
+# test db
+test_db.json
+agent_local_storage.db
+
+# ui node_modules
+ui/node_modules/
+ersnguyennc7304Projectcowelltestagent-tool.venvScriptsactivate.bat
+code_example/
+screenshots/

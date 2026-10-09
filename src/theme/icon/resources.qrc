@@ -1,0 +1,28 @@
+<RCC>
+  <qresource prefix="png">
+    <file>png/logout.png</file>
+    <file>png/up.png</file>
+    <file>png/black_circle.png</file>
+    <file>png/gray_circle.png</file>
+    <file>png/green_circle.png</file>
+    <file>png/red_circle.png</file>
+    <file>png/add.png</file>
+    <file>png/cms.png</file>
+    <file>png/exclamation_white.png</file>
+    <file>png/logo.png</file>
+    <file>png/monitor.png</file>
+    <file>png/report.png</file>
+    <file>png/settings.png</file>
+    <file>png/sidebar.png</file>
+    <file>png/sidebar_subtab_line.png</file>
+    <file>png/sidebar_subtab_line_end.png</file>
+    <file>png/test_tube.png</file>
+    <file>png/down.png</file>
+    <file>png/user.png</file>
+    <file>png/feedback.png</file>
+    <file>png/cowell_short.png</file>
+  </qresource>
+  <qresource prefix="svg">
+    <file>svg/sidebar.svg</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ScreenshotViewer</class>
+ <widget class="QDialog" name="ScreenshotViewer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Fixed Screenshot Viewer</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog {
+    background-color: #ECF0F0;
+    font-family: Arial, sans-serif;
+}</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="headerLayout">
+     <item>
+      <widget class="QLabel" name="titleLabel">
+       <property name="styleSheet">
+        <string notr="true">QLabel {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #203532;
+    padding: 10px;
+}</string>
+       </property>
+       <property name="text">
+        <string>Screenshots: 0 images</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="headerSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="imageCountLabel">
+       <property name="styleSheet">
+        <string notr="true">QLabel {
+    font-size: 14pt;
+    color: #666666;
+    padding: 5px;
+}</string>
+       </property>
+       <property name="text">
+        <string>0 images</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="screenshotsLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="topMargin">
+      <number>10</number>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="screenshot1Container">
+       <item>
+        <widget class="QLabel" name="screenshot1Label">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    background-color: #FFFFFF;
+    border: 2px solid #CCCCCC;
+    border-radius: 8px;
+    color: #666666;
+    font-size: 12pt;
+}
+QLabel:hover {
+    border: 2px solid #4A90E2;
+}</string>
+         </property>
+         <property name="text">
+          <string>No Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="screenshot2Container">
+       <item>
+        <widget class="QLabel" name="screenshot2Label">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    background-color: #FFFFFF;
+    border: 2px solid #CCCCCC;
+    border-radius: 8px;
+    color: #666666;
+    font-size: 12pt;
+}
+QLabel:hover {
+    border: 2px solid #4A90E2;
+}</string>
+         </property>
+         <property name="text">
+          <string>No Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="screenshot3Container">
+       <item>
+        <widget class="QLabel" name="screenshot3Label">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>250</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    background-color: #FFFFFF;
+    border: 2px solid #CCCCCC;
+    border-radius: 8px;
+    color: #666666;
+    font-size: 12pt;
+}
+QLabel:hover {
+    border: 2px solid #4A90E2;
+}</string>
+         </property>
+         <property name="text">
+          <string>No Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="navigationLayout">
+     <item>
+      <widget class="QPushButton" name="prevButton">
+       <property name="minimumSize">
+        <size>
+         <width>140</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #28A745;
+    color: white;
+    font-size: 14pt;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 10px 20px;
+    border: none;
+    min-width: 100px;
+}
+QPushButton:hover {
+    background-color: #218838;
+}
+QPushButton:pressed {
+    background-color: #1E7E34;
+}
+QPushButton:disabled {
+    background-color: #CCCCCC;
+    color: #666666;
+}</string>
+       </property>
+       <property name="text">
+        <string>← Previous</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="leftSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <spacer name="rightSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="nextButton">
+       <property name="minimumSize">
+        <size>
+         <width>140</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #28A745;
+    color: white;
+    font-size: 14pt;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 10px 20px;
+    border: none;
+    min-width: 100px;
+}
+QPushButton:hover {
+    background-color: #218838;
+}
+QPushButton:pressed {
+    background-color: #1E7E34;
+}
+QPushButton:disabled {
+    background-color: #CCCCCC;
+    color: #666666;
+}</string>
+       </property>
+       <property name="text">
+        <string>Next →</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

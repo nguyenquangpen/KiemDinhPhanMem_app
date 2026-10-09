@@ -1,0 +1,12 @@
+<RCC>
+  <qresource prefix="/">
+    <file>static/sidebar_subtab_line.png</file>
+    <file>static/sidebar.png</file>
+    <file>static/user.png</file>
+    <file>static/logo.png</file>
+    <file>static/exclamation_white.png</file>
+  </qresource>
+  <qresource prefix="svg">
+    <file>static/sidebar.svg</file>
+  </qresource>
+</RCC>

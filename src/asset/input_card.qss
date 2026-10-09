@@ -1,0 +1,16 @@
+QWidget#InputCardBox {
+    background-color: #FFFFFF;
+    border-radius: 30px;
+}
+
+QLabel#InputFieldLabel {
+    color: rgb(111, 111, 111);
+}
+
+QLineEdit#InputFieldText {
+    padding: 8px;
+    background-color: #ECF0F0;
+    border-radius: 7px;
+    border: none;
+}
+

@@ -1,0 +1,242 @@
+#pagination-container {
+    background-color: #FFFFFF;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+}
+
+QPushButton#PageNavButton {
+    background-color: #FFFFFF; 
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: #000000;
+    padding: 5px 10px;
+}
+
+QPushButton#PageNavButton:hover { 
+    color: #F0F0F0; 
+}
+
+#PageButton {
+    background-color: #D9D9D9; 
+    color: #203532;
+    border: none;
+    border-radius: 8px;
+}
+
+#PageButton:hover { 
+    background-color: #e2e6ea; 
+}
+
+#ActivePageButton {
+    background-color: #56BB55;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+#TableHeader, 
+#TableHeaderFirst, 
+#TableHeaderLast {
+    background-color: #D9D9D9;
+    color: #203532;
+    padding: 0 20px;
+    min-height: 40px;
+}
+
+#TableHeaderFirst { 
+    border-top-left-radius: 30px; 
+}
+
+#TableHeaderLast { 
+    border-top-right-radius: 30px; 
+}
+
+QWidget#RowEven {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #D9D9D9;
+}
+
+QWidget#RowOdd {
+    background-color: #ECF0F0;
+    border-bottom: 1px solid #D9D9D9;
+}
+
+AddRowWidget:hover { 
+    background-color: #ECF0F0; 
+}
+
+QPushButton#add-row-button {
+    background-color: #56BB55;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QPushButton#add-row-button:hover { 
+    background-color: #4aa549; 
+}
+
+QLabel#NumberPositive { 
+    color: #56BB55; 
+    font-weight: 600; 
+}
+
+QLabel#NumberNegative { 
+    color: #F48080; 
+    font-weight: 600; 
+}
+
+QPushButton#DefaultDeleteButton {
+    background-color: #F48080;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-weight: 600;
+    font-size: 9px;
+}
+
+QPushButton#DefaultDeleteButton:hover { 
+    background-color: #e06c6c; 
+}
+
+QWidget#CalculationWidget {
+    background-color: #FFFFFF;
+    border-top: 1px solid #D9D9D9;
+}
+
+QLabel#CalculationLabel {
+    color: #4A90E2;
+    padding: 2px;
+    font-weight: bold;
+}
+
+QTableWidget#testcase-table {
+    background-color: #FFFFFF;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    gridline-color: #E0E0E0;
+    color: #203532;
+}
+
+QTableWidget#testcase-table::item {
+    padding: 8px;
+    border-bottom: 1px solid #E0E0E0;
+}
+
+QTableWidget#testcase-table::item:selected {
+    background-color: #E3F2FD;
+    color: #1976D2;
+}
+
+QTableWidget#testcase-table QHeaderView::section {
+    background-color: #F5F5F5;
+    color: #203532;
+    font-weight: bold;
+    font-size: 12pt;
+    padding: 10px;
+    border: 1px solid #CCCCCC;
+}
+
+QWidget#RowRunning {
+    background-color: #FFF3CD;
+}
+QWidget#RowRunning QLabel {
+    color: #856404;
+    background-color: transparent;
+}
+
+QWidget#RowPassed {
+    background-color: #D4EDDA; 
+}
+QWidget#RowPassed QLabel {
+    color: #155724;
+    background-color: transparent;
+}
+
+QWidget#RowFailed {
+    background-color: #F8D7DA; 
+}
+QWidget#RowFailed QLabel {
+    color: #721c24;
+    background-color: transparent;
+}
+
+QWidget#RowError {
+    background-color: #F5C6CB;
+}
+QWidget#RowError QLabel {
+    color: #721c24;
+    background-color: transparent;
+}
+
+QWidget#RowEven {
+    background-color: #FFFFFF;
+}
+QWidget#RowOdd {
+    background-color: #ECF0F0;
+}
+
+/* --- Green Row (for success, positive status) --- */
+QWidget#RowColor_green {
+    background-color: #E8F5E9; /* A light, pleasant green */
+    border-bottom: 1px solid #D9D9D9;
+}
+QWidget#RowColor_green QLabel {
+    color: #1E4620; /* Darker green text for better contrast */
+}
+QWidget#RowColor_green:hover {
+    background-color: #D9EAD3; /* Slightly darker green on hover */
+}
+
+
+/* --- Red Row (for errors, alerts, negative status) --- */
+QWidget#RowColor_red {
+    background-color: #F8D7DA; /* A light, non-intrusive red */
+    border-bottom: 1px solid #D9D9D9;
+}
+QWidget#RowColor_red QLabel {
+    color: #721C24; /* Dark red text for context */
+}
+QWidget#RowColor_red:hover {
+    background-color: #F5C6CB; /* Slightly darker red on hover */
+}
+
+
+/* --- Blue Row (for information, selection highlights) --- */
+QWidget#RowColor_blue {
+    background-color: #E3F2FD; /* A soft, light blue */
+    border-bottom: 1px solid #D9D9D9;
+}
+QWidget#RowColor_blue QLabel {
+    color: #0D47A1; /* Dark blue text */
+}
+QWidget#RowColor_blue:hover {
+    background-color: #D4EAF7; /* Slightly darker blue on hover */
+}
+
+
+/* --- White and Off-White (for neutralizing or default states) --- */
+/* This can be used to explicitly set a row back to a neutral color. */
+
+QWidget#RowColor_white {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #D9D9D9;
+}
+QWidget#RowColor_white:hover {
+    background-color: #ECF0F0; /* Use OFF_WHITE for hover */
+}
+
+
+/* Use "off_white" as the color_name string in your code */
+QWidget#RowColor_off_white {
+    background-color: #ECF0F0;
+    border-bottom: 1px solid #D9D9D9;
+}
+QWidget#RowColor_off_white:hover {
+    background-color: #D9D9D9; /* Use LIGHT_GRAY for hover */
+}

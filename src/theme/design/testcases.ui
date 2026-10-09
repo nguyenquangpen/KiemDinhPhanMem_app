@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Test Case Management</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow {
+    background-color: #ECF0F0;
+    font-family: 'Lexend';
+}
+
+QLabel {
+    color: #203532;
+    font-size: 16pt;
+    font-weight: bold;
+}
+
+QPushButton {
+    font-family: 'Lexend';
+    font-size: 16pt;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 8px 16px;
+    border: 2px solid transparent;
+}
+
+QPushButton#backButton {
+    background-color: #666666;
+    color: #FFFFFF;
+}
+
+QPushButton#backButton:hover {
+    background-color: #555555;
+}
+
+QPushButton#runButton {
+    background-color: #4A90E2;
+    color: #FFFFFF;
+}
+
+QPushButton#runButton:hover {
+    background-color: #357ABD;
+}
+
+QPushButton#deleteButton {
+    background-color: #F48080;
+    color: #FFFFFF;
+}
+
+QPushButton#deleteButton:hover {
+    background-color: #E66B6B;
+}
+
+QPushButton#addButton {
+    background-color: #56BB55;
+    color: #FFFFFF;
+}
+
+QPushButton#addButton:hover {
+    background-color: #4AA849;
+}
+
+QTableWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #CCCCCC;
+    gridline-color: #E0E0E0;
+    font-family: 'Lexend';
+    font-size: 14pt;
+    color: #203532;
+}
+
+QTableWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #E0E0E0;
+}
+
+QTableWidget::item:selected {
+    background-color: #E3F2FD;
+}
+
+QHeaderView::section {
+    background-color: #F5F5F5;
+    color: #203532;
+    font-family: 'Lexend';
+    font-size: 14pt;
+    font-weight: bold;
+    padding: 12px 8px;
+    border: 1px solid #CCCCCC;
+}
+
+QLabel#okCountLabel {
+    background-color: #56BB55;
+    color: #FFFFFF;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14pt;
+}
+
+QLabel#ngCountLabel {
+    background-color: #F48080;
+    color: #FFFFFF;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14pt;
+}</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>20</number>
+    </property>
+    <property name="leftMargin">
+     <number>20</number>
+    </property>
+    <property name="topMargin">
+     <number>20</number>
+    </property>
+    <property name="rightMargin">
+     <number>20</number>
+    </property>
+    <property name="bottomMargin">
+     <number>20</number>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="headerLayout">
+      <item>
+       <widget class="QPushButton" name="backButton">
+        <property name="text">
+         <string>BACK</string>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="headerSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="titleLabel">
+        <property name="text">
+         <string>Danh sách các testcase</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="headerSpacer2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="addButton">
+        <property name="text">
+         <string>+ Add</string>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="buttonLayout">
+      <item>
+       <spacer name="buttonSpacer1">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="okCountLabel">
+        <property name="text">
+         <string>10 OK</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="ngCountLabel">
+        <property name="text">
+         <string>1 NG</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="buttonSpacer2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="runButton">
+        <property name="text">
+         <string>▶ Run ...</string>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>120</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="deleteButton">
+        <property name="text">
+         <string>✖ Delete ...</string>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>120</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="testCaseTable">
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <property name="showGrid">
+       <bool>true</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <attribute name="horizontalHeaderCascadingSectionResizes">
+       <bool>false</bool>
+      </attribute>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
+      </attribute>
+      <column>
+       <property name="text">
+        <string>☐</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Field</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Type</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Testcase</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Refer</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Test Result</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Run Status</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Created at</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Last Updated</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Action</string>
+       </property>
+      </column>
+      <row>
+       <property name="text">
+        <string>1</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>2</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>3</string>
+       </property>
+      </row>
+      <row>
+       <property name="text">
+        <string>4</string>
+       </property>
+      </row>
+      <item row="0" column="0">
+       <property name="text">
+        <string>☐</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="0" column="1">
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </item>
+      <item row="0" column="2">
+       <property name="text">
+        <string>Empty Input</string>
+       </property>
+      </item>
+      <item row="0" column="3">
+       <property name="text">
+        <string>Không nhập ... name: "" ...</string>
+       </property>
+      </item>
+      <item row="0" column="4">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="0" column="5">
+       <property name="text">
+        <string>OK</string>
+       </property>
+       <property name="background">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>86</red>
+          <green>187</green>
+          <blue>85</blue>
+         </color>
+        </brush>
+       </property>
+       <property name="foreground">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </item>
+      <item row="0" column="6">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="0" column="7">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="0" column="8">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="0" column="9">
+       <property name="text">
+        <string>👁 View  ✏ Edit</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="1" column="0">
+       <property name="text">
+        <string>☐</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="1" column="1">
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </item>
+      <item row="1" column="2">
+       <property name="text">
+        <string>Empty Input</string>
+       </property>
+      </item>
+      <item row="1" column="3">
+       <property name="text">
+        <string>Không nhập ... name: "" ...</string>
+       </property>
+      </item>
+      <item row="1" column="4">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="1" column="5">
+       <property name="text">
+        <string>NG</string>
+       </property>
+       <property name="background">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>244</red>
+          <green>128</green>
+          <blue>128</blue>
+         </color>
+        </brush>
+       </property>
+       <property name="foreground">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </item>
+      <item row="1" column="6">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="1" column="7">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="1" column="8">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="1" column="9">
+       <property name="text">
+        <string>👁 View  ✏ Edit</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="2" column="0">
+       <property name="text">
+        <string>☐</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="2" column="1">
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </item>
+      <item row="2" column="2">
+       <property name="text">
+        <string>Empty Input</string>
+       </property>
+      </item>
+      <item row="2" column="3">
+       <property name="text">
+        <string>Không nhập ... name: "" ...</string>
+       </property>
+      </item>
+      <item row="2" column="4">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="2" column="5">
+       <property name="text">
+        <string>N/A</string>
+       </property>
+       <property name="background">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>255</red>
+          <green>165</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </property>
+       <property name="foreground">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </item>
+      <item row="2" column="6">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="2" column="7">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="2" column="8">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="2" column="9">
+       <property name="text">
+        <string>👁 View  ✏ Edit</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="3" column="0">
+       <property name="text">
+        <string>☐</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+      <item row="3" column="1">
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </item>
+      <item row="3" column="2">
+       <property name="text">
+        <string>Empty Input</string>
+       </property>
+      </item>
+      <item row="3" column="3">
+       <property name="text">
+        <string>Không nhập ... name: "" ...</string>
+       </property>
+      </item>
+      <item row="3" column="4">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="3" column="5">
+       <property name="text">
+        <string>OK</string>
+       </property>
+       <property name="background">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>86</red>
+          <green>187</green>
+          <blue>85</blue>
+         </color>
+        </brush>
+       </property>
+       <property name="foreground">
+        <brush brushstyle="SolidPattern">
+         <color>
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </item>
+      <item row="3" column="6">
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item row="3" column="7">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="3" column="8">
+       <property name="text">
+        <string>09:00...</string>
+       </property>
+      </item>
+      <item row="3" column="9">
+       <property name="text">
+        <string>👁 View  ✏ Edit</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignCenter</set>
+       </property>
+      </item>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1200</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
