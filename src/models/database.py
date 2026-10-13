@@ -699,7 +699,13 @@ class DataManager:
                 (self.current_local_user_id,),
             )
             project_rows = self.cursor.fetchall()
-            self.projects = [Project.from_dict(dict(row)) for row in project_rows]
+            projects = []
+            for row in project_rows:
+                project_dict = dict(row)
+                # Kèm task + testcase để các ô đếm Cases / OK / NG hiển thị đúng
+                project_dict["tasks"] = await self.list_tasks(project_dict["uuid"])
+                projects.append(Project.from_dict(project_dict))
+            self.projects = projects
             self._projects_by_id = {p.project_id: p for p in self.projects}
             return self.projects
         except sqlite3.Error as e:
@@ -1199,6 +1205,11 @@ class DataManager:
                 task_dict = dict(row)
                 specs_json = task_dict.pop("specs_json", "[]")
                 task_dict["items"] = json.loads(specs_json or "[]")
+                self.cursor.execute(
+                    "SELECT uuid, test_status FROM testcases WHERE task_uuid = ?",
+                    (task_dict["uuid"],),
+                )
+                task_dict["test_cases"] = [dict(tc) for tc in self.cursor.fetchall()]
                 tasks.append(task_dict)
             return tasks
         except sqlite3.Error as e:

@@ -384,6 +384,7 @@ class Task:
             ),  # Handle None case
             task_name=data.get("task_name", ""),
             specs=specs,
+            test_cases=[Testcase.from_dict(tc) for tc in data.get("test_cases", [])],
             # API specific fields
             url_test=data.get("url_test", ""),
             viewpoint_id=data.get("viewpoint_id", ""),
