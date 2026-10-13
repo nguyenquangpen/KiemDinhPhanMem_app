@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 from models.database import DataManager
 from services.logging_config import get_logger
 from ui.build.ui_add_or_edit_testcase import Ui_ModernTestcaseForm
+from views.components import icons
 
 logger = get_logger("add_edit_testcase_dialog")
 
@@ -93,19 +94,41 @@ class AddEditTestCaseDialog(QDialog):
             "editing" if test_case else "creating new",
         )
 
+    def _apply_styles(self):
+        """Map the generated widgets onto the shared stylesheet roles."""
+        ui = self.ui
+        ui.titleLabel.setObjectName("PageTitle")
+        ui.subtitleLabel.setObjectName("PageSubtitle")
+        for lbl in (ui.fieldLabel, ui.typeLabel, ui.expectLabel, ui.testcaseLabel, ui.referLabel):
+            lbl.setObjectName("FieldLabel")
+        ui.expectLabel.setText("Expected result")
+        ui.line.setObjectName("Divider")
+        ui.line.setFrameShape(ui.line.Shape.NoFrame)
+        ui.line.setFixedHeight(1)
+        ui.saveButton.setObjectName("PrimaryButton")
+        ui.saveButton.setIcon(icons.icon("save", "#FFFFFF", 16))
+        ui.saveButton.setMinimumSize(150, 38)
+        ui.fieldInput.setPlaceholderText("e.g. Email")
+        ui.typeInput.setPlaceholderText("e.g. Required, Length, Format")
+        ui.expectInput.setPlaceholderText("What should happen")
+        ui.testcaseInput.setPlaceholderText("What the test does")
+        ui.referTextEdit.setPlaceholderText("Input values or notes the agent should use")
+        ui.referTextEdit.setFont(self.font())
+
     def _setup_dialog(self):
         """Setup dialog properties."""
+        self._apply_styles()
         if self.test_case:
             self.setWindowTitle("Edit Test Case")
-            self.ui.titleLabel.setText("Edit Test Case")
+            self.ui.titleLabel.setText("Edit test case")
             test_case_id = self.test_case.get("id") or self.test_case.get("uuid", "N/A")
             self.ui.subtitleLabel.setText(f"ID: {test_case_id}")
-            self.ui.saveButton.setText("💾 Update Test Case")
+            self.ui.saveButton.setText("Update test case")
         else:
             self.setWindowTitle("Add New Test Case")
-            self.ui.titleLabel.setText("Add New Test Case")
+            self.ui.titleLabel.setText("New test case")
             self.ui.subtitleLabel.setText("Create a new test case")
-            self.ui.saveButton.setText("💾 Create Test Case")
+            self.ui.saveButton.setText("Create test case")
 
         # Set dialog properties
         self.setModal(True)
@@ -173,7 +196,7 @@ class AddEditTestCaseDialog(QDialog):
 
         # Disable save button during operation
         self.ui.saveButton.setEnabled(False)
-        self.ui.saveButton.setText("💾 Saving...")
+        self.ui.saveButton.setText("Saving...")
 
         test_case_data = self._get_form_data()
 
@@ -256,9 +279,9 @@ class AddEditTestCaseDialog(QDialog):
         """Reset save button to original state."""
         self.ui.saveButton.setEnabled(True)
         if self.test_case:
-            self.ui.saveButton.setText("💾 Update Test Case")
+            self.ui.saveButton.setText("Update test case")
         else:
-            self.ui.saveButton.setText("💾 Create Test Case")
+            self.ui.saveButton.setText("Create test case")
 
     def closeEvent(self, event):
         """Handle dialog close event."""

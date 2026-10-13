@@ -17,10 +17,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from asset import tokens
 from models.data_classes import Project, User
 from models.database import DataManager
 from services.logging_config import get_logger
-from ui.build.ui_project_cms import Ui_ProjectCmsWidget
+from views.components import icons, ui_kit
 from views.components.table import (
     ActionColumnConfig,
     BaseColumnConfig,
@@ -33,7 +34,6 @@ from views.components.table import (
     TableModel,
     TextColumnConfig,
 )
-from views.components.total_card import DotColor, TotalCard
 from pathlib import Path
 
 logger = get_logger("project_cms")
@@ -52,7 +52,10 @@ class ProjectDialog(QDialog):
         )
 
         self.main_layout = QVBoxLayout(self)
-        self.form_layout = QFormLayout()
+        self.main_layout.setContentsMargins(24, 24, 24, 20)
+        self.main_layout.setSpacing(14)
+        self.form_layout = QVBoxLayout()
+        self.form_layout.setSpacing(12)
 
         # Create input fields
         self.name_edit = QLineEdit(self)
@@ -75,17 +78,29 @@ class ProjectDialog(QDialog):
         else:
             self.password_edit.setPlaceholderText("Login password (Optional)")
 
-        # Add rows to the form layout
-        self.form_layout.addRow("Name:", self.name_edit)
-        self.form_layout.addRow("URL:", self.url_edit)
-        self.form_layout.addRow("Description:", self.description_edit)
-        self.form_layout.addRow("Login ID:", self.login_id_edit)
-        self.form_layout.addRow("Password:", self.password_edit)
+        # Labels sit above their inputs
+        self.main_layout.addWidget(
+            ui_kit.label("Edit project" if self.is_edit_mode else "New project", "CardTitle")
+        )
+        self.main_layout.addWidget(
+            ui_kit.label("The AI agent uses the login details before each run.", "MutedText", wrap=True)
+        )
+        self.form_layout.addWidget(ui_kit.field("Project name", self.name_edit))
+        self.form_layout.addWidget(ui_kit.field("Login URL", self.url_edit))
+        self.form_layout.addWidget(ui_kit.field("Description", self.description_edit))
+        credentials = QHBoxLayout()
+        credentials.setSpacing(12)
+        credentials.addWidget(ui_kit.field("Login ID", self.login_id_edit))
+        credentials.addWidget(ui_kit.field("Password", self.password_edit))
+        self.form_layout.addLayout(credentials)
 
         # Standard dialog buttons
         self.button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
+        ok_btn = self.button_box.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setText("Save changes" if self.is_edit_mode else "Create project")
+        ok_btn.setObjectName("PrimaryButton")
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
@@ -95,8 +110,9 @@ class ProjectDialog(QDialog):
         self.description_edit.textChanged.connect(self._validate_inputs)
 
         self.main_layout.addLayout(self.form_layout)
+        self.main_layout.addSpacing(6)
         self.main_layout.addWidget(self.button_box)
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(480)
 
         # Populate fields if in edit mode
         if self.is_edit_mode and self.project:
@@ -172,12 +188,11 @@ class ProjectCMS(QWidget):
     def __init__(self, data_manager: DataManager, parent=None):
         super().__init__(parent)
         self.db = data_manager
-        self.ui = Ui_ProjectCmsWidget()
-        self.ui.setupUi(self)
 
         self.all_projects: List[Project] = []
         self.displayed_projects: List[Project] = []
         self.project_id_map: Dict[str, Project] = {}
+        self.ng_only = False
 
         self.thread_pool = QThreadPool.globalInstance()
         self._configure_table_columns()
@@ -186,19 +201,14 @@ class ProjectCMS(QWidget):
             self.column_configs,
             self.table_model,
             items_per_page=15,
+            item_height=52,
+            header_height=46,
             highlight_selected_row=True,
         )
-
-        self.table_widget.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum
-        )
         self.setObjectName("PageWidget")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        container_layout = QVBoxLayout(self.ui.tableContainerWidget)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.addWidget(self.table_widget)
-
-        self._setup_total_cards()
+        self._build_ui()
         self._connect_signals()
         QTimer.singleShot(0, self.refresh_data_async)
         self._connect_global_signals()
@@ -207,7 +217,7 @@ class ProjectCMS(QWidget):
         # self.db.signals.project_edited.connect(self.refresh_data_async)
         if hasattr(self.db.signals, 'current_user_changed'):
             self.db.signals.current_user_changed.connect(self._on_auth_state_changed)
-        # self.ui.searchLineEdit.textChanged.connect(self._handle_search)
+        # self.search_edit.textChanged.connect(self._handle_search)
         # self.ui.newProjectButton.clicked.connect(self._handle_project_create)
     
     def _on_auth_state_changed(self, user):
@@ -252,17 +262,19 @@ class ProjectCMS(QWidget):
         self._update_total_cards([])
 
     def populate_table(self, projects: list[Project]):
+        if self.ng_only:
+            projects = [p for p in projects if (p.ng_testcase_count or 0) > 0]
         self.displayed_projects = projects
         table_data = [
             [
-                # None,  # Data for SelectColumnConfig (index 0)
-                None,  # Data for IndexColumnConfig (index 1) - widget generates this
+                None,  # IndexColumnConfig - widget generates this
                 p.name,
                 p.total_testcase_count or 0,
                 p.executed_testcase_count or 0,
                 p.ok_testcase_count or 0,
                 p.ng_testcase_count or 0,
-                None,  # Data for ActionColumnConfig (index 7)
+                (p.executed_testcase_count or 0, p.total_testcase_count or 0, p.ng_testcase_count or 0),
+                None,  # ActionColumnConfig
             ]
             for p in projects
         ]
@@ -270,166 +282,305 @@ class ProjectCMS(QWidget):
         self.table_model.set_data(table_data)
         self.table_widget.blockSignals(False)
 
-    def _setup_total_cards(self):
-        self.total_projects_card = TotalCard(color=DotColor.Gray, name="Total Projects")
-        self.total_testcases_card = TotalCard(
-            color=DotColor.Gray, name="Total Test Cases"
-        )
-        self.executed_testcases_card = TotalCard(
-            color=DotColor.Black, name="Executed Cases"
-        )
-        self.ok_testcases_card = TotalCard(color=DotColor.Green, name="OK Test Cases")
-        self.ng_testcases_card = TotalCard(color=DotColor.Red, name="NG Test Cases")
+    # ------------------------------------------------------------------ layout
+    def _build_ui(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(32, 28, 32, 28)
+        root.setSpacing(24)
 
-        self.ui.totalWidgetLayout.addWidget(self.total_projects_card)
-        self.ui.totalWidgetLayout.addWidget(self.total_testcases_card)
-        self.ui.totalWidgetLayout.addWidget(self.executed_testcases_card)
-        self.ui.totalWidgetLayout.addWidget(self.ok_testcases_card)
-        self.ui.totalWidgetLayout.addWidget(self.ng_testcases_card)
+        self.search_edit = QLineEdit()
+        self.search_edit.setObjectName("SearchLineEdit")
+        self.search_edit.setPlaceholderText("Search project...")
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.addAction(
+            icons.icon("search", tokens.TEXT_MUTED, 16), QLineEdit.ActionPosition.LeadingPosition
+        )
+        self.search_edit.setFixedWidth(280)
+        self.new_project_button = ui_kit.button("New project", "primary", "plus")
+        root.addWidget(
+            ui_kit.page_header(
+                "Projects",
+                "Choose a project to open it in Test Studio.",
+                [self.search_edit, self.new_project_button],
+            )
+        )
+
+        body = QHBoxLayout()
+        body.setSpacing(24)
+        body.addWidget(self.table_widget, 1)
+
+        side = QVBoxLayout()
+        side.setSpacing(24)
+        side.addWidget(self._build_overview_card())
+        side.addWidget(self._build_last_opened_card())
+        side.addStretch(1)
+        side_box = QWidget()
+        side_box.setLayout(side)
+        side_box.setFixedWidth(280)
+        side.setContentsMargins(0, 0, 0, 0)
+        body.addWidget(side_box)
+        root.addLayout(body, 1)
+
+    def _build_overview_card(self) -> QWidget:
+        card = ui_kit.Card(padding=0, spacing=0)
+        self.overview_head = ui_kit.centered_header("Total test cases", "0", "across 0 projects", big_role="HeroNumber")
+        card.body.addWidget(self.overview_head)
+
+        stats = ui_kit.CardSection(padding=(24, 18, 24, 18), spacing=12)
+        stats.body.addWidget(ui_kit.label("Execution", "CardEyebrow", align=Qt.AlignmentFlag.AlignHCenter))
+        self.stat_executed = ui_kit.StatRow("Executed", "0", "ok")
+        self.stat_ok = ui_kit.StatRow("OK", "0", "ok")
+        self.stat_ng = ui_kit.StatRow("NG", "0", "ng")
+        self.stat_not_run = ui_kit.StatRow("Not run yet", "0", "none")
+        for row in (self.stat_executed, self.stat_ok, self.stat_ng, self.stat_not_run):
+            stats.body.addWidget(row)
+        card.body.addWidget(stats)
+
+        divider_box = QHBoxLayout()
+        divider_box.setContentsMargins(24, 0, 24, 0)
+        divider_box.addWidget(ui_kit.divider(dotted=True))
+        card.body.addLayout(divider_box)
+
+        rate = ui_kit.CardSection(padding=(24, 16, 24, 22), spacing=8)
+        center = Qt.AlignmentFlag.AlignHCenter
+        rate.body.addWidget(ui_kit.label("Pass rate", "CardEyebrow", align=center))
+        rate.body.addWidget(ui_kit.label("OK ÷ executed cases", "MutedText", align=center))
+        self.pass_rate_box = ui_kit.label("—", "ValueBox", align=Qt.AlignmentFlag.AlignCenter)
+        rate.body.addWidget(self.pass_rate_box)
+        self.pass_rate_bar = ui_kit.progress(0)
+        rate.body.addWidget(self.pass_rate_bar)
+        self.ng_projects_label = ui_kit.label("", "BodyText", wrap=True, align=center)
+        rate.body.addSpacing(4)
+        rate.body.addWidget(self.ng_projects_label)
+        self.ng_filter_button = ui_kit.button("Show NG only", "secondary", small=True)
+        self.ng_filter_button.setCheckable(True)
+        self.ng_filter_button.toggled.connect(self._toggle_ng_filter)
+        rate.body.addWidget(self.ng_filter_button, 0, center)
+        card.body.addWidget(rate)
+        return card
+
+    def _build_last_opened_card(self) -> QWidget:
+        card = ui_kit.Card(padding=0, spacing=0)
+        self.last_opened_head = ui_kit.centered_header("Current project", "", "", line=False)
+        card.body.addWidget(self.last_opened_head)
+        action_box = ui_kit.CardSection(padding=(24, 0, 24, 24))
+        self.continue_button = ui_kit.button("Continue testing", "primary", "arrow-right", icon_right=True)
+        self.continue_button.clicked.connect(self._continue_current_project)
+        action_box.body.addWidget(self.continue_button)
+        card.body.addWidget(action_box)
+        self.last_opened_card = card
+        self._refresh_last_opened()
+        return card
+
+    def _refresh_last_opened(self, *_args):
+        project = None
+        try:
+            project = self.db.get_current_project()
+        except Exception as e:  # noqa: BLE001 - informational card only
+            logger.debug("Could not read current project: %s", e)
+        head = self.last_opened_head
+        if project:
+            head.big_label.setText(project.name)
+            head.big_label.setVisible(True)
+            head.caption_label.setText(project.url or "")
+            head.caption_label.setVisible(bool(project.url))
+            self.continue_button.setVisible(True)
+        else:
+            head.big_label.setVisible(False)
+            head.caption_label.setText("No project opened yet. Open one from the list.")
+            head.caption_label.setVisible(True)
+            self.continue_button.setVisible(False)
+
+    def _continue_current_project(self):
+        project = self.db.get_current_project()
+        if project:
+            self.project_selected.emit(project)
+
+    def _toggle_ng_filter(self, checked: bool):
+        self.ng_only = checked
+        self.ng_filter_button.setText("Show all projects" if checked else "Show NG only")
+        self._handle_search(self.search_edit.text())
 
     def _update_total_cards(self, projects: list[Project]):
-        if not projects:
-            self.total_projects_card.set_value(0)
-            self.total_testcases_card.set_value(0)
-            self.executed_testcases_card.set_value(0)
-            self.ok_testcases_card.set_value(0)
-            self.ng_testcases_card.set_value(0)
-            return
-
         total_projects = len(projects)
-        total_testcases = sum(p.total_testcase_count for p in projects)
-        executed_testcases = sum(p.executed_testcase_count for p in projects)
-        ok_testcases = sum(p.ok_testcase_count for p in projects)
-        ng_testcases = sum(p.ng_testcase_count for p in projects)
+        total = sum(p.total_testcase_count or 0 for p in projects)
+        executed = sum(p.executed_testcase_count or 0 for p in projects)
+        ok = sum(p.ok_testcase_count or 0 for p in projects)
+        ng = sum(p.ng_testcase_count or 0 for p in projects)
+        ng_projects = sum(1 for p in projects if (p.ng_testcase_count or 0) > 0)
 
-        self.total_projects_card.set_value(total_projects)
-        self.total_testcases_card.set_value(total_testcases)
-        self.executed_testcases_card.set_value(executed_testcases)
-        self.ok_testcases_card.set_value(ok_testcases)
-        self.ng_testcases_card.set_value(ng_testcases)
+        self.overview_head.big_label.setText(f"{total:,}")
+        noun = "project" if total_projects == 1 else "projects"
+        self.overview_head.caption_label.setText(f"across {total_projects} {noun}")
+        self.stat_executed.set_value(f"{executed:,}")
+        self.stat_ok.set_value(f"{ok:,}")
+        self.stat_ng.set_value(f"{ng:,}")
+        self.stat_not_run.set_value(f"{max(total - executed, 0):,}")
 
+        if executed:
+            rate = ok / executed * 100
+            self.pass_rate_box.setText(f"{rate:.1f}%")
+            self.pass_rate_bar.setValue(round(rate))
+        else:
+            self.pass_rate_box.setText("—")
+            self.pass_rate_bar.setValue(0)
+
+        if ng_projects:
+            noun = "project has" if ng_projects == 1 else "projects have"
+            self.ng_projects_label.setText(f"{ng_projects} {noun} NG cases.")
+        else:
+            self.ng_projects_label.setText("No NG cases. Nice work.")
+        self.ng_filter_button.setVisible(bool(ng_projects) or self.ng_only)
+
+    # ------------------------------------------------------------- table cells
     def _create_actions_widget(self, cell_data, row_index):
         _ = cell_data
         actions_widget = QWidget()
         layout = QHBoxLayout(actions_widget)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setSpacing(6)
 
-        view_button = QPushButton("View")
-        view_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        view_button.setObjectName("BlueButton")
+        view_button = ui_kit.button("Open", "secondary", "arrow-right", icon_right=True, small=True)
         view_button.clicked.connect(partial(self._handle_project_selected, row_index))
-
-        edit_button = QPushButton("Edit")
-        edit_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        edit_button.setObjectName("GreenButton")
-        edit_button.clicked.connect(partial(self._handle_project_edit, row_index))
-
-        delete_button = QPushButton("Delete")
-        delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        delete_button.setObjectName("RedButton")
-        delete_button.clicked.connect(partial(self._handle_project_delete, row_index))
-
+        edit_button = ui_kit.icon_button(
+            "edit", "Edit project", on_click=partial(self._handle_project_edit, row_index)
+        )
+        delete_button = ui_kit.icon_button(
+            "trash", "Delete project", danger=True,
+            on_click=partial(self._handle_project_delete, row_index),
+        )
+        layout.addStretch(1)
         layout.addWidget(view_button)
         layout.addWidget(edit_button)
         layout.addWidget(delete_button)
         return actions_widget
 
     def _create_ng_test_cases_widget(self, cell_data, row_index):
-        label = QLabel(str(cell_data))
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setProperty("class", "ngCount")
+        _ = row_index
         has_ng = str(cell_data).isdigit() and int(cell_data) > 0
-        label.setProperty("has_ng", "true" if has_ng else "false")
-        return label
+        box = QWidget()
+        layout = QHBoxLayout(box)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        icon_lbl = QLabel()
+        status = "ng" if has_ng else "ok"
+        icon_lbl.setPixmap(icons.pixmap(icons.status_icon_name(status), icons.status_color(status), 17))
+        layout.addStretch(1)
+        layout.addWidget(icon_lbl)
+        if has_ng:
+            label = QLabel(str(cell_data))
+            label.setProperty("class", "ngCount")
+            label.setProperty("has_ng", "true")
+            layout.addWidget(label)
+        else:
+            icon_lbl.setToolTip("No NG cases")
+        layout.addStretch(1)
+        return box
+
+    def _create_progress_widget(self, cell_data, row_index):
+        _ = row_index
+        executed, total, ng = cell_data if isinstance(cell_data, tuple) else (0, 0, 0)
+        pct = round(executed / total * 100) if total else 0
+        box = QWidget()
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(3)
+        layout.addStretch(1)
+        layout.addWidget(ui_kit.progress(pct, "ng" if ng else "ok"))
+        layout.addWidget(ui_kit.label(f"{pct}% executed", "MutedText"))
+        layout.addStretch(1)
+        return box
 
     def _create_clickable_project_name_widget(self, cell_data, row_index):
         label = QLabel(str(cell_data))
         label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         label.setProperty("class", "projectName")
+        label.setToolTip("Open project")
+        label.mousePressEvent = lambda _e, r=row_index: self._handle_project_selected(r)
         return label
 
     def _configure_table_columns(self):
+        right = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         self.column_configs: List[BaseColumnConfig] = [
-        #     SelectColumnConfig(
-        #     header="Select",
-        #     select_type=SelectType.SINGLE,
-        #     default_width=0.04,
-        #     min_width=40,
-        # ),
             IndexColumnConfig(
                 header="No.",
                 editable=False,
-                default_width=0.065,
-                min_width=60,
+                default_width=0.05,
+                min_width=48,
                 alignment=Qt.AlignmentFlag.AlignCenter,
             ),
             TextColumnConfig(
-                header="Project Name",
+                header="Project",
                 editable=True,
-                min_width=200,
-                default_width=0.286,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                min_width=140,
+                default_width=0.25,
+                alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 default_value="New Project",
                 widget_factory=self._create_clickable_project_name_widget,
             ),
             NumberColumnConfig(
-                header="Total Cases",
+                header="Cases",
                 editable=False,
-                default_width=0.130,
-                min_width=100,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                default_width=0.08,
+                min_width=60,
+                alignment=right,
                 calculation=NumberCalculation.SUM,
                 decimal_places=0,
             ),
             NumberColumnConfig(
                 header="Executed",
                 editable=False,
-                default_width=0.130,
-                min_width=100,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                default_width=0.09,
+                min_width=64,
+                alignment=right,
                 calculation=NumberCalculation.SUM,
                 decimal_places=0,
             ),
             NumberColumnConfig(
-                header="OK Test Cases",
+                header="OK",
                 editable=False,
-                default_width=0.109,
-                min_width=80,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                default_width=0.07,
+                min_width=48,
+                alignment=right,
                 calculation=NumberCalculation.SUM,
                 decimal_places=0,
             ),
             NumberColumnConfig(
-                header="NG Test Cases",
+                header="NG",
                 editable=False,
-                default_width=0.109,
-                min_width=80,
+                default_width=0.07,
+                min_width=48,
                 alignment=Qt.AlignmentFlag.AlignCenter,
                 default_value=0,
                 widget_factory=self._create_ng_test_cases_widget,
                 calculation=NumberCalculation.SUM,
                 decimal_places=0,
             ),
+            BaseColumnConfig(
+                header="Progress",
+                editable=False,
+                default_width=0.14,
+                min_width=90,
+                alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                widget_factory=self._create_progress_widget,
+            ),
             ActionColumnConfig(
                 header="Actions",
                 editable=False,
                 resizable=False,
-                default_width=0.150,
-                min_width=140,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                default_width=0.18,
+                min_width=180,
+                alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                 widget_factory=self._create_actions_widget,
             ),
         ]
 
     def _connect_signals(self):
-        self.ui.searchLineEdit.setObjectName("SearchLineEdit")
-        self.ui.searchLineEdit.textChanged.connect(self._handle_search)
-        self.ui.newProjectButton.setObjectName("NewProjectButton")
-        self.ui.newProjectButton.clicked.connect(self._handle_project_create)
-        # self.table_widget.selection_changed.connect(self._handle_row_selection_changed)
+        self.search_edit.textChanged.connect(self._handle_search)
+        self.new_project_button.clicked.connect(self._handle_project_create)
         self.db.signals.project_edited.connect(self.refresh_data_async)
+        self.db.signals.current_project_changed.connect(self._refresh_last_opened)
 
     def _handle_row_selection_changed(self, selected_indices: List[int]):
         if selected_indices:
@@ -570,7 +721,7 @@ class ProjectCMS(QWidget):
                     if project_in_all_list:
                         self.all_projects.remove(project_in_all_list)
 
-                    self._handle_search(self.ui.searchLineEdit.text())
+                    self._handle_search(self.search_edit.text())
                     # self.refresh_data()
                     QMessageBox.information(
                         self, "Success", f"Project '{project_name}' has been deleted."
@@ -608,7 +759,7 @@ class ProjectCMS(QWidget):
                     )
                     self.project_created.emit(new_project)
 
-                    self.ui.searchLineEdit.clear()
+                    self.search_edit.clear()
                     
                     self.all_projects.insert(0, new_project)
                     
@@ -616,7 +767,7 @@ class ProjectCMS(QWidget):
                     self._update_total_cards(self.all_projects)
 
                     # self.refresh_data()
-                    # self.ui.searchLineEdit.clear()
+                    # self.search_edit.clear()
                     QMessageBox.information(
                         self,
                         "Success",

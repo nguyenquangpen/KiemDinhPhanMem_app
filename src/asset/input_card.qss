@@ -1,16 +1,62 @@
+/* ==========================================================================
+   InputCard (views/components/input_card.py)
+   ========================================================================== */
+
 QWidget#InputCardBox {
     background-color: #FFFFFF;
-    border-radius: 30px;
+    border: 1px solid #E3E5E5;
+    border-radius: 8px;
 }
 
 QLabel#InputFieldLabel {
-    color: rgb(111, 111, 111);
+    font-size: 12px;
+    font-weight: 600;
+    color: #1E2B29;
 }
 
 QLineEdit#InputFieldText {
-    padding: 8px;
-    background-color: #ECF0F0;
-    border-radius: 7px;
-    border: none;
+    background-color: #FFFFFF;
+    border: 1px solid #D3D7D6;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+QLineEdit#InputFieldText:focus {
+    border: 1px solid #2E6DB4;
 }
 
+/* --- Validation-type chips (add_choices_widget.py) --- */
+QWidget#Pill {
+    background-color: #FAFAFA;
+    border: 1px solid #D3D7D6;
+    border-radius: 11px;
+}
+QLabel#PillLabel {
+    font-size: 11px;
+    color: #1E2B29;
+    background: transparent;
+}
+QPushButton#PillRemove {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 0px;
+    min-height: 0px;
+    color: #5B6866;
+    font-size: 13px;
+}
+QPushButton#PillRemove:hover {
+    background-color: #FCEDEC;
+    color: #9E2F27;
+}
+QPushButton#PillAdd {
+    background-color: #FFFFFF;
+    border: 1px dashed #2F8A55;
+    border-radius: 11px;
+    padding: 0px;
+    min-height: 0px;
+    color: #2F8A55;
+    font-weight: 600;
+}
+QPushButton#PillAdd:hover {
+    background-color: #EAF5EE;
+}

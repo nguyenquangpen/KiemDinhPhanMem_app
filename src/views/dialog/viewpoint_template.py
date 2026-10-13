@@ -25,6 +25,7 @@ from views.components.table import (
     ActionColumnConfig,
 )
 from services.logging_config import get_logger
+from views.components import ui_kit
 
 logger = get_logger("viewpoint_template")
 
@@ -46,15 +47,15 @@ class AddFromTemplateDialog(QDialog):
         self.all_template_viewpoints: List[Viewpoint] = []
         self.filtered_viewpoints: List[Viewpoint] = []
 
-        self.setFont(QFont("Segoe UI", 10))
-
         # --- UI Setup ---
         main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(24, 24, 24, 20)
+        main_layout.setSpacing(12)
         self._setup_ui(main_layout)
 
         # --- Button Box ---
         self.selected_count_label = QLabel("Selected: 0")
-        self.selected_count_label.setFont(QFont("Segoe UI", 10))
+        self.selected_count_label.setObjectName("PaginationInfo")
         self.data_table.pagination_layout.insertWidget(0, self.selected_count_label)
 
         self.button_box = QDialogButtonBox(
@@ -84,8 +85,11 @@ class AddFromTemplateDialog(QDialog):
 
     def _setup_ui(self, layout: QVBoxLayout):
         """Sets up the widgets using the new DataTableWidget."""
-        label = QLabel("Select viewpoints from the list of available templates:")
+        label = ui_kit.label("Add viewpoints from templates", "CardTitle")
+        hint = ui_kit.label("Select viewpoints from the list of available templates.", "MutedText")
         self.search_input = QLineEdit()
+        self.search_input.setObjectName("SearchLineEdit")
+        self.search_input.setClearButtonEnabled(True)
         self.search_input.setPlaceholderText("Search by name or action description...")
 
         # --- DataTableWidget Setup ---
@@ -104,13 +108,15 @@ class AddFromTemplateDialog(QDialog):
                 default_width=0.5,
                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             ),
-            ActionColumnConfig(header="Action")
+            ActionColumnConfig(header="", min_width=60)
         ]
 
         self.data_table = DataTableWidget(
             column_configs=column_configs,
             model=self.table_model,
             items_per_page=20,
+            item_height=44,
+            header_height=44,
             highlight_selected_row=True,
             parent=self,
         )
@@ -119,43 +125,17 @@ class AddFromTemplateDialog(QDialog):
 
         # Add All Widgets to Main Layout
         layout.addWidget(label)
+        layout.addWidget(hint)
         layout.addWidget(self.search_input)
         layout.addWidget(self.data_table)
         # The DataTableWidget includes its own pagination, so no need for manual controls.
 
     def _apply_stylesheet(self):
-        """Applies a stylesheet to the dialog, using default styles for the table."""
-        # --- Color constants for the remaining styles ---
-        COLOR_BG_LIGHT = "#ECF0F0"
-        COLOR_ACCENT_GREEN = "#56BB55"
-        COLOR_ACCENT_GREEN_HOVER = "#4aa649"
-        COLOR_BORDER = "#D9D9D9"
-        COLOR_TEXT_LIGHT = "#FFFFFF"
-        COLOR_TEXT_DARK = "#203532"
-        COLOR_DISABLED = "#B0B0B0"
-
-        # --- Stylesheet with all table-related rules removed ---
-        stylesheet = f"""
-            QDialog {{ background-color: {COLOR_BG_LIGHT}; color: {COLOR_TEXT_DARK}; }}
-            QLabel {{ font-size: 14px; font-weight: bold; padding-bottom: 5px; color: {COLOR_TEXT_DARK}; }}
-
-            QLineEdit {{
-                background-color: {COLOR_TEXT_LIGHT}; border: 1px solid {COLOR_BORDER};
-                border-radius: 8px; padding: 8px 12px; font-size: 11pt;
-            }}
-            QLineEdit:focus {{ border: 1px solid {COLOR_ACCENT_GREEN}; }}
-
-            /* --- Table-related styles have been removed. --- */
-            /* --- The DataTableWidget will now use default system styles. --- */
-
-            QDialogButtonBox QPushButton {{ font-size: 11pt; font-weight: bold; padding: 10px 25px; border-radius: 8px; }}
-            QPushButton#addButton {{ background-color: {COLOR_ACCENT_GREEN}; color: {COLOR_TEXT_LIGHT}; border: none; }}
-            QPushButton#addButton:hover {{ background-color: {COLOR_ACCENT_GREEN_HOVER}; }}
-            QPushButton#addButton:disabled {{ background-color: {COLOR_DISABLED}; color: {COLOR_BG_LIGHT}; }}
-            QPushButton#cancelButton {{ background-color: {COLOR_TEXT_LIGHT}; color: {COLOR_TEXT_DARK}; border: 1px solid {COLOR_BORDER}; }}
-            QPushButton#cancelButton:hover {{ background-color: {COLOR_BORDER}; }}
-        """
-        self.setStyleSheet(stylesheet)
+        """Buttons take their look from the global stylesheet (asset/buttons.qss)."""
+        self.add_button.setObjectName("PrimaryButton")
+        self.cancel_button.setObjectName("NeutralButton")
+        ui_kit.repolish(self.add_button)
+        ui_kit.repolish(self.cancel_button)
 
     def _load_all_data(self):
         """Fetches all template viewpoints from the DB into the master list."""

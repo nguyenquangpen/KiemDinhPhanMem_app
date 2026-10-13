@@ -18,7 +18,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from asset import tokens
 from models.data_classes import Spec, Task, Viewpoint, ViewpointType
+from views.components import icons, ui_kit
 
 # Assuming the provided context files are in these locations
 from models.database import DataManager
@@ -58,6 +60,12 @@ class AddTaskDialog(QDialog):
         self.setMinimumWidth(500)
         self.viewpoint_name_to_id_map = viewpoint_name_to_id_map
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+        layout.addWidget(ui_kit.label("New task", "CardTitle"))
+        layout.addWidget(
+            ui_kit.label("A task is one page to test. Pick the page viewpoint that describes it.", "MutedText", wrap=True)
+        )
 
         task_creation_configs = [
             InputCardConfig(
@@ -264,19 +272,29 @@ class TestcaseGenerationProgressDialog(QDialog):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(12)
 
         # Status label
         self.status_label = QLabel("Initializing testcase generation...")
+        self.status_label.setObjectName("CardTitle")
         layout.addWidget(self.status_label)
+        layout.addWidget(
+            ui_kit.label("The AI agent reads the page and the field specifications. This can take a few minutes.", "MutedText", wrap=True)
+        )
 
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setFixedHeight(8)
         layout.addWidget(self.progress_bar)
 
         # Log output
+        layout.addWidget(ui_kit.label("Activity", "FieldLabel"))
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
+        self.log_output.setFont(QFont(tokens.FONT_MONO, 9))
         self.log_output.setMaximumHeight(200)
         layout.addWidget(self.log_output)
 
@@ -576,14 +594,17 @@ class TaskWidget(QWidget):
             self.db.set_current_task_sync(None)
 
     def _init_ui(self):
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(32, 28, 32, 28)
+        main_layout.setSpacing(20)
 
-        title_label = QLabel("Task Management")
-        title_label.setFont(QFont("Lexend", 18, QFont.Weight.Bold))
-        title_label.setObjectName("TitleLabel")
-        main_layout.addWidget(title_label)
+        main_layout.addWidget(
+            ui_kit.page_header(
+                "Task management",
+                "Describe the fields on a page, then let the agent generate test cases.",
+            )
+        )
 
         task_editing_configs = [
             InputCardConfig(
@@ -606,28 +627,128 @@ class TaskWidget(QWidget):
 
         self.current_task_card = InputCard(
             configs=task_editing_configs,
-            save_button_text="Update Task",
-            min_w=400,
-            max_w=600,
+            save_button_text="Update task",
+            field_spacing=6,
+            field_height=60,
         )
+        # The card draws no frame of its own here; the settings card does.
+        self.current_task_card.box.setObjectName("Section")
         # The card is disabled as no task can be selected.
         self.current_task_card.setEnabled(False)
 
         self._setup_tasks_table()
 
         top_section = QHBoxLayout()
-        top_section.addWidget(self.current_task_card, stretch=1)
-        top_section.addWidget(self.tasks_table_widget, stretch=2)
-        main_layout.addLayout(top_section)
+        top_section.setSpacing(24)
+        top_section.addWidget(self.tasks_table_widget, stretch=4)
+        top_section.addWidget(self._build_task_settings_card(), stretch=6)
+        main_layout.addLayout(top_section, 5)
 
-        specifications_title = QLabel("Task Specifications")
-        specifications_title.setFont(QFont("Lexend", 14, QFont.Weight.Medium))
-        main_layout.addWidget(
-            specifications_title, alignment=Qt.AlignmentFlag.AlignLeft
-        )
+        spec_header = QHBoxLayout()
+        spec_header.setSpacing(12)
+        spec_header.addWidget(ui_kit.label("Field specifications", "CardTitle"))
+        self.unsaved_label = ui_kit.label("Unsaved changes", "WarningText")
+        self.unsaved_label.setVisible(False)
+        spec_header.addWidget(self.unsaved_label)
+        spec_header.addStretch(1)
+        spec_header.addWidget(ui_kit.label("Double-click a cell to edit it.", "MutedText"))
+        main_layout.addLayout(spec_header)
 
         self._setup_specifications_table()
-        main_layout.addWidget(self.specifications_table_widget)
+        main_layout.addWidget(self.specifications_table_widget, 4)
+
+    def _build_task_settings_card(self) -> QWidget:
+        card = ui_kit.Card(padding=0, spacing=0)
+        split = QHBoxLayout()
+        split.setSpacing(0)
+        card.body.addLayout(split)
+
+        form_section = ui_kit.CardSection(padding=(0, 18, 0, 4), spacing=0, line="right")
+        self.task_title_label = ui_kit.label("No task selected", "CardEyebrow")
+        title_box = QVBoxLayout()
+        title_box.setContentsMargins(24, 0, 24, 0)
+        title_box.addWidget(self.task_title_label)
+        form_section.body.addLayout(title_box)
+        form_section.body.addWidget(self.current_task_card)
+        split.addWidget(form_section, 1)
+
+        ai = ui_kit.CardSection(padding=(24, 18, 24, 20), spacing=8)
+        center = Qt.AlignmentFlag.AlignHCenter
+        ai.body.addWidget(ui_kit.label("AI test generation", "CardEyebrow", align=center))
+        ai.body.addWidget(
+            ui_kit.label("Uses the page viewpoint and the field specifications below.", "MutedText", wrap=True, align=center)
+        )
+        ai.body.addSpacing(6)
+        self.check_viewpoint = ui_kit.StatRow("Page viewpoint selected", "", "none")
+        self.check_specs = ui_kit.StatRow("Fields specified", "", "none")
+        self.check_locators = ui_kit.StatRow("Field locators picked", "", "none")
+        for row in (self.check_viewpoint, self.check_specs, self.check_locators):
+            ai.body.addWidget(row)
+        ai.body.addStretch(1)
+        self.generate_button = ui_kit.button("Generate test cases", "primary", "sparkle")
+        self.generate_button.clicked.connect(self._generate_for_current_task)
+        ai.body.addWidget(self.generate_button)
+        ai.body.addSpacing(4)
+        ai.body.addWidget(ui_kit.label("Faster, exact runs without the agent:", "BodyText", wrap=True, align=center))
+        self.pick_fields_button = ui_kit.button("Pick fields on page", "secondary", "target", small=True)
+        self.pick_fields_button.clicked.connect(self._pick_fields_for_current_task)
+        ai.body.addWidget(self.pick_fields_button, 0, center)
+        split.addWidget(ai, 1)
+        self._refresh_ai_panel(None)
+        return card
+
+    def _current_task_row(self) -> int:
+        current = self.db.get_current_task()
+        if not current or not current.task_id:
+            return -1
+        for i, task in enumerate(self.current_tasks):
+            if task and task.task_id == current.task_id:
+                return i
+        return -1
+
+    def _generate_for_current_task(self):
+        row = self._current_task_row()
+        if row >= 0:
+            self._handle_generate_testcase(row)
+
+    def _pick_fields_for_current_task(self):
+        row = self._current_task_row()
+        if row >= 0:
+            self._handle_pick_fields(row)
+
+    def _refresh_ai_panel(self, task: Optional[Task]):
+        """Update the checklist next to the task form for the selected task."""
+        has_task = bool(task and task.task_id)
+        self.generate_button.setEnabled(has_task and bool(task.viewpoint_id))
+        self.pick_fields_button.setEnabled(has_task)
+        if not has_task:
+            self.task_title_label.setText("No task selected")
+            for row in (self.check_viewpoint, self.check_specs, self.check_locators):
+                row.set_status("none")
+            self.check_specs.set_text("Fields specified")
+            self.check_locators.set_text("Field locators picked")
+            self.generate_button.setToolTip("Select a task first")
+            return
+        self.task_title_label.setText(task.task_name or "Untitled task")
+        self.check_viewpoint.set_status("ok" if task.viewpoint_id else "warn")
+        self.check_viewpoint.set_text(
+            "Page viewpoint selected" if task.viewpoint_id else "No page viewpoint yet"
+        )
+        n_specs = len(task.specs or [])
+        self.check_specs.set_status("ok" if n_specs else "warn")
+        self.check_specs.set_text(f"{n_specs} field{'s' if n_specs != 1 else ''} specified")
+        locators = get_task_locators(task.task_id)
+        n_picked = len(locators["fields"]) if locators else 0
+        missing = max(n_specs - n_picked, 0)
+        self.check_locators.set_status("ok" if n_specs and not missing else "warn")
+        self.check_locators.set_text(
+            "All field locators picked" if n_specs and not missing
+            else f"{missing} field{'s' if missing != 1 else ''} without a locator"
+        )
+        self.generate_button.setToolTip(
+            "Generate testcases using AI analysis" if task.viewpoint_id
+            else "Please select a Page Viewpoint for this task first"
+        )
     
     def _run_db_modification_task(self, db_function, *args, **kwargs):
         """Runs a generic DB modification task in the background."""
@@ -661,13 +782,16 @@ class TaskWidget(QWidget):
         else:
             QMessageBox.critical(self, "Error", f"Operation failed: {message}")
 
+    def _set_unsaved_ui(self, unsaved: bool):
+        """Enable the save button and show the 'Unsaved changes' hint together."""
+        self.save_specs_button.setEnabled(unsaved)
+        self.unsaved_label.setVisible(unsaved)
+
     def _create_delete_button_widget(self, _cell_data, row_index):
-        btn = QPushButton("Delete")
-        btn.setFixedSize(60, 24)
-        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn.setObjectName("RedButton")
-        btn.clicked.connect(partial(self._delete_specification, row_index))
-        return btn
+        return ui_kit.icon_button(
+            "trash", "Delete field", danger=True,
+            on_click=partial(self._delete_specification, row_index),
+        )
 
     def _create_btn_task_spec_actions(self, cell_data, row_index):
         _ = cell_data
@@ -675,14 +799,33 @@ class TaskWidget(QWidget):
         layout = QHBoxLayout(actions_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
-
-        delete_button = QPushButton("Delete")
-        delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        delete_button.setObjectName("RedButton")
-        delete_button.clicked.connect(partial(self._delete_specification, row_index))
-
-        layout.addWidget(delete_button)
+        layout.addStretch(1)
+        layout.addWidget(self._create_delete_button_widget(None, row_index))
+        layout.addStretch(1)
         return actions_widget
+
+    def _create_task_name_cell(self, cell_data, row_index):
+        """Task name with its id underneath (the model column holds the id)."""
+        task = self.current_tasks[row_index] if row_index < len(self.current_tasks) else None
+        box = QWidget()
+        col = QVBoxLayout(box)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(0)
+        name = ui_kit.label(task.task_name if task else "", "CellStrong")
+        short_id = str(cell_data or "")[:8]
+        col.addStretch(1)
+        col.addWidget(name)
+        col.addWidget(ui_kit.label(f"#{short_id}" if short_id else "", "MutedText"))
+        col.addStretch(1)
+        return box
+
+    def _create_task_viewpoint_cell(self, cell_data, row_index):
+        _ = cell_data
+        task = self.current_tasks[row_index] if row_index < len(self.current_tasks) else None
+        name = self.viewpoint_id_to_name_map.get(task.viewpoint_id, "") if task else ""
+        if not name:
+            return ui_kit.badge("No viewpoint", "run")
+        return ui_kit.label(name, "MutedText")
 
     def _create_btn_task_actions(self, cell_data, row_index):
         _ = cell_data
@@ -691,9 +834,8 @@ class TaskWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
 
-        gen_button = QPushButton("Generate testcase")
-        gen_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        gen_button.setObjectName("GreenButton")
+        layout.addStretch(1)
+        gen_button = ui_kit.icon_button("sparkle", "Generate test cases")
         gen_button.clicked.connect(partial(self._handle_generate_testcase, row_index))
 
         # Check if the task has a viewpoint selected
@@ -707,14 +849,13 @@ class TaskWidget(QWidget):
             else:
                 gen_button.setToolTip("Generate testcases using AI analysis")
 
-        delete_button = QPushButton("Delete")
-        delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        delete_button.setObjectName("RedButton")
-        delete_button.clicked.connect(partial(self._delete_task, row_index))
+        delete_button = ui_kit.icon_button(
+            "trash", "Delete task", danger=True, on_click=partial(self._delete_task, row_index)
+        )
 
-        pick_button = QPushButton("🎯 Chọn field")
-        pick_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        pick_button.clicked.connect(partial(self._handle_pick_fields, row_index))
+        pick_button = ui_kit.icon_button(
+            "target", "Pick fields on page", on_click=partial(self._handle_pick_fields, row_index)
+        )
         if row_index < len(self.current_tasks) and self.current_tasks[row_index]:
             locators = get_task_locators(self.current_tasks[row_index].task_id)
             pick_button.setToolTip(
@@ -837,21 +978,20 @@ class TaskWidget(QWidget):
 
     def _setup_specifications_table(self):
 
-        self.save_specs_button = QPushButton("Save Specifications")
-        self.save_specs_button.setObjectName("GreenButton")
+        self.save_specs_button = ui_kit.button("Save specifications", "primary", "save", small=True)
         self.save_specs_button.setToolTip(
             "Saves all changes made to the specifications list"
         )
-        self.save_specs_button.setEnabled(False)  # Initially disabled
+        self._set_unsaved_ui(False)  # Initially disabled
         self.save_specs_button.clicked.connect(self._save_specifications)
 
         self.specifications_column_configs = [
             TextColumnConfig(
                 header="Item name",
                 editable=True,
-                min_width=150,
-                default_width=0.2,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                min_width=130,
+                default_width=0.16,
+                alignment=Qt.AlignmentFlag.AlignLeft,
             ),
             DropdownColumnConfig(
                 header="Required",
@@ -877,29 +1017,29 @@ class TaskWidget(QWidget):
             TextColumnConfig(
                 header="Specifications",
                 editable=True,
-                min_width=200,
-                default_width=0.25,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                min_width=160,
+                default_width=0.2,
+                alignment=Qt.AlignmentFlag.AlignLeft,
             ),
             TextColumnConfig(
                 header="Default values",
                 editable=True,
-                min_width=150,
-                default_width=0.2,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                min_width=110,
+                default_width=0.13,
+                alignment=Qt.AlignmentFlag.AlignLeft,
             ),
             ListDataColumnConfig(
                 header="Validation type",
-                min_width=300,
+                min_width=240,
                 default_width=0.3,
-                alignment=Qt.AlignmentFlag.AlignCenter,
+                alignment=Qt.AlignmentFlag.AlignLeft,
                 items_factory=self._get_component_viewpoint_names,
             ),
             ActionColumnConfig(
-                header="Actions",
+                header="",
                 widget_factory=self._create_btn_task_spec_actions,
-                min_width=70,
-                default_width=0.07,
+                min_width=56,
+                default_width=0.05,
                 alignment=Qt.AlignmentFlag.AlignCenter,
             ),
         ]
@@ -907,9 +1047,9 @@ class TaskWidget(QWidget):
         self.specifications_table_widget = DataTableWidget(
             column_configs=self.specifications_column_configs,
             model=self.specifications_table_model,
-            items_per_page=5,
-            item_height=110,
-            header_height=40,
+            items_per_page=6,
+            item_height=56,
+            header_height=44,
             show_add_button=True,
             highlight_selected_row=True,
             custom_buttons=[self.save_specs_button],
@@ -930,27 +1070,38 @@ class TaskWidget(QWidget):
 
     def _setup_tasks_table(self):
         # Removed SelectColumnConfig to disablef selection via checkboxes
+        # Model rows stay [None, task_id, task_name, None]; the cells render
+        # the task name (+ short id) and its page viewpoint.
+        left = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         self.tasks_columns = [
-            SelectColumnConfig(header="", select_type=SelectType.SINGLE),
-            TextColumnConfig(header="Task ID", editable=False, default_width=0.2),
-            TextColumnConfig(header="Task Name", editable=False, default_width=0.4),
+            SelectColumnConfig(header="", select_type=SelectType.SINGLE, min_width=40),
+            TextColumnConfig(
+                header="Task", editable=False, default_width=0.38, min_width=120,
+                alignment=left, widget_factory=self._create_task_name_cell,
+            ),
+            TextColumnConfig(
+                header="Viewpoint", editable=False, default_width=0.27, min_width=90,
+                alignment=left, widget_factory=self._create_task_viewpoint_cell,
+            ),
             ActionColumnConfig(
-                header="Actions",
+                header="",
                 editable=False,
                 widget_factory=self._create_btn_task_actions,
-                default_width=0.25,
+                default_width=0.3,
+                min_width=120,
             ),
         ]
         self.tasks_model = TableModel([])
         self.tasks_table_widget = DataTableWidget(
             column_configs=self.tasks_columns,
             model=self.tasks_model,
-            items_per_page=10,
-            item_height=48,
-            header_height=40,
+            items_per_page=6,
+            item_height=54,
+            header_height=44,
             show_add_button=True,
             highlight_selected_row=True,
         )
+        self.tasks_table_widget.add_button.setText("Add task")
         self.tasks_table_widget.selection_changed.connect(
             self._on_task_selection_changed
         )
@@ -980,18 +1131,15 @@ class TaskWidget(QWidget):
             return not self.is_specs_unsaved
         elif reply == QMessageBox.StandardButton.Discard:
             self.is_specs_unsaved = False
-            self.save_specs_button.setEnabled(False)
+            self._set_unsaved_ui(False)
             return True  # Proceed
         else:  # Cancel
             return False  # Cancel the calling action
 
     def _create_task_actions_widget(self, _cell_data, row_index):
-        btn = QPushButton("Delete")
-        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn.setFixedSize(70, 26)
-        btn.setObjectName("RedButton")
-        btn.clicked.connect(partial(self._delete_task, row_index))
-        return btn
+        return ui_kit.icon_button(
+            "trash", "Delete task", danger=True, on_click=partial(self._delete_task, row_index)
+        )
 
     def _load_tasks_in_background(self):
         self.task_thread = QThread()
@@ -1083,10 +1231,12 @@ class TaskWidget(QWidget):
                 self.current_task_card.clear_data()
                 self.current_task_card.setEnabled(False)
                 self._refresh_specifications_table(None)
+                self._refresh_ai_panel(None)
                 self._updating_selection = False
                 return
 
             self.current_task_card.setEnabled(True)
+            self._refresh_ai_panel(current_task)
 
             task_details_for_card = {
                 "Task Name": current_task.task_name,
@@ -1136,8 +1286,8 @@ class TaskWidget(QWidget):
             for t in tasks
         ]
 
-        self.tasks_model.set_data(table_data)
         self.current_tasks = tasks
+        self.tasks_model.set_data(table_data)
         self._update_table_selection(None)
 
     def _open_add_task_dialog(self):
@@ -1210,7 +1360,7 @@ class TaskWidget(QWidget):
         row_data = self.tasks_model.get_row(row_index)
         if not row_data:
             return
-        task_id, task_name = row_data[1], row_data[0]
+        task_id, task_name = row_data[1], row_data[2]
 
         # MODIFICATION: Added check for task ID before proceeding
         if not task_id:
@@ -1251,7 +1401,7 @@ class TaskWidget(QWidget):
 
         # Reset dirty flag as we are leaving the context for a new project.
         self.is_specs_unsaved = False
-        self.save_specs_button.setEnabled(False)
+        self._set_unsaved_ui(False)
         
         self._refresh_viewpoint_data()
         # Reload tasks for the new project
@@ -1302,12 +1452,12 @@ class TaskWidget(QWidget):
         # Instead of saving, just refresh the table and mark as dirty
         # self._refresh_specifications_table(task=current_task)
         self.is_specs_unsaved = True
-        self.save_specs_button.setEnabled(True)
+        self._set_unsaved_ui(True)
 
     def _refresh_specifications_table(self, task: Optional[Task]):
         # Reset dirty flag whenever the table is reloaded
         self.is_specs_unsaved = False
-        self.save_specs_button.setEnabled(False)
+        self._set_unsaved_ui(False)
 
         if task and task.specs:
             specs_data = []
@@ -1378,7 +1528,7 @@ class TaskWidget(QWidget):
                         def refresh_table_and_enable_save():
                             self._refresh_specifications_table(current_task)
                             self.is_specs_unsaved = True
-                            self.save_specs_button.setEnabled(True)
+                            self._set_unsaved_ui(True)
 
                         QTimer.singleShot(0, refresh_table_and_enable_save)
                     else:
@@ -1386,7 +1536,7 @@ class TaskWidget(QWidget):
 
             # Mark as dirty and enable the save button
             self.is_specs_unsaved = True
-            self.save_specs_button.setEnabled(True)
+            self._set_unsaved_ui(True)
 
         except (ValueError, TypeError) as e:
             logger.error(f"Error processing spec change: {e}")
@@ -1448,7 +1598,7 @@ class TaskWidget(QWidget):
             )
 
             self.is_specs_unsaved = False
-            self.save_specs_button.setEnabled(False)
+            self._set_unsaved_ui(False)
 
         except Exception as e:
             logger.error(f"Error preparing to save specifications: {e}")
@@ -1477,4 +1627,4 @@ class TaskWidget(QWidget):
             current_task.specs.pop(row_index)
             self._refresh_specifications_table(current_task)
             self.is_specs_unsaved = True
-            self.save_specs_button.setEnabled(True)
+            self._set_unsaved_ui(True)

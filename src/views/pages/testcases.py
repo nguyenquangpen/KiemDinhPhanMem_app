@@ -28,7 +28,9 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
+from asset import tokens
 from models.data_classes import Project
+from views.components import icons, ui_kit
 from models.database import DataManager
 from services.logging_config import get_logger
 from services.field_locators import get_task_locators
@@ -656,68 +658,116 @@ class TestCaseMainWindow(QWidget):
 
     def setup_ui(self):
         """Setup UI components for the widget"""
-        # Main layout
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(32, 28, 32, 28)
+        main_layout.setSpacing(20)
 
-        # Header section
-        header_layout = QHBoxLayout()
+        # Header: title + main actions
+        self.addButton = ui_kit.button("Add test case", "neutral", "plus")
+        self.stopButton = ui_kit.button("Stop", "danger", "stop")
+        self.stopButton.setToolTip("Stop the selected test cases")
+        self.runButton = ui_kit.button("Run selected", "primary", "play")
+        self.header = ui_kit.page_header(
+            "Test cases", "", [self.addButton, self.stopButton, self.runButton]
+        )
+        main_layout.addWidget(self.header)
 
-        # Title
-        title_label = QLabel("Test Case Management")
-        title_label.setObjectName("TitleLabel")
-        header_layout.addWidget(title_label)
-
-        header_layout.addStretch()
-
-        # Action buttons
-
-        self.addButton = QPushButton("+ Add Test Case")
-        self.addButton.setObjectName("GreenButton")
-
-        self.runButton = QPushButton("▶ Run Selected")
-        self.runButton.setObjectName("BlueButton")
-
-        self.deleteButton = QPushButton("🗑 Delete Selected")
-        self.deleteButton.setObjectName("RedButton")
-
-        self.stopButton = QPushButton("⏹ Stop Selected")
-        self.stopButton.setObjectName("RedButton")
-
-        header_layout.addWidget(self.addButton)
-        header_layout.addWidget(self.runButton)
-        header_layout.addWidget(self.stopButton)
-        header_layout.addWidget(self.deleteButton)
-
-        main_layout.addLayout(header_layout)
+        # Summary + bulk actions above the table
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(8)
+        self.summary_badges = {
+            "all": ui_kit.badge("All 0", "info"),
+            "ok": ui_kit.badge("OK 0", "ok"),
+            "ng": ui_kit.badge("NG 0", "ng"),
+            "run": ui_kit.badge("Running 0", "run"),
+            "none": ui_kit.badge("Not run 0", "none"),
+        }
+        for badge in self.summary_badges.values():
+            toolbar.addWidget(badge)
+        toolbar.addStretch(1)
+        self.deleteButton = ui_kit.button("Delete selected", "ghost-danger", "trash", small=True)
+        toolbar.addWidget(self.deleteButton)
+        main_layout.addLayout(toolbar)
 
         self.table_container = QWidget()
-        main_layout.addWidget(self.table_container)
+        main_layout.addWidget(self.table_container, 1)
+
+    @staticmethod
+    def _result_tone(text: str) -> str:
+        t = str(text or "").strip().lower()
+        if t in ("passed", "completed", "ok", "success"):
+            return "ok"
+        if t in ("failed", "error", "ng"):
+            return "ng"
+        if t.startswith("running") or t in ("cancelled", "stopping"):
+            return "run"
+        return "none"
+
+    def _create_result_cell(self, cell_data, row_index):
+        _ = row_index
+        text = str(cell_data or "Pending")
+        return ui_kit.badge(text, self._result_tone(text))
+
+    def _create_field_cell(self, cell_data, row_index):
+        _ = row_index
+        return ui_kit.label(str(cell_data or ""), "CellStrong", wrap=True)
+
+    def _create_muted_cell(self, cell_data, row_index):
+        _ = row_index
+        return ui_kit.label(str(cell_data or ""), "MutedText", wrap=True)
+
+    def _update_summary(self):
+        """Refresh the OK / NG / running counters above the table."""
+        counts = {"ok": 0, "ng": 0, "run": 0, "none": 0}
+        for i in range(self.table_model.get_row_count()):
+            row = self.table_model.get_row(i) or []
+            counts[self._result_tone(row[5] if len(row) > 5 else "")] += 1
+        total = sum(counts.values())
+        ui_kit.set_badge(self.summary_badges["all"], f"All {total}", "info")
+        ui_kit.set_badge(self.summary_badges["ok"], f"OK {counts['ok']}", "ok")
+        ui_kit.set_badge(self.summary_badges["ng"], f"NG {counts['ng']}", "ng")
+        ui_kit.set_badge(self.summary_badges["run"], f"Running {counts['run']}", "run")
+        ui_kit.set_badge(self.summary_badges["none"], f"Not run {counts['none']}", "none")
+        self.summary_badges["run"].setVisible(counts["run"] > 0)
+
+        task_name = getattr(self.current_task, "task_name", "") if self.current_task else ""
+        noun = "case" if total == 1 else "cases"
+        subtitle = f"Task \u201c{task_name}\u201d \u00b7 {total} {noun}" if task_name else f"{total} {noun}"
+        self.header.subtitle_label.setText(subtitle)
+        self.header.subtitle_label.setVisible(True)
 
     def _setup_datatable(self):
         """Setup the DataTableWidget with consistent project styling."""
+        left = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         column_configs: List[ColumnConfig] = [
             SelectColumnConfig(
-                header="Select",
-                default_width=0.05,
+                header="",
+                default_width=0.04,
+                min_width=40,
                 resizable=True,
                 select_type=SelectType.MULTIPLE,
             ),
-            TextColumnConfig(header="Field", default_width=0.10, resizable=True),
-            TextColumnConfig(header="Type", default_width=0.10),
+            TextColumnConfig(header="Field", default_width=0.11, resizable=True, alignment=left,
+                             widget_factory=self._create_field_cell),
+            TextColumnConfig(header="Type", default_width=0.10, alignment=left,
+                             widget_factory=self._create_muted_cell),
             TextColumnConfig(
-                header="Test Case",
-                default_width=0.35,
-                alignment=(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
+                header="Test case",
+                default_width=0.33,
+                alignment=left,
             ),
-            TextColumnConfig(header="Step Number", default_width=0.05),
-            TextColumnConfig(header="Test Result", default_width=0.05),
-            TextColumnConfig(header="Run Status", default_width=0.05),
-            TextColumnConfig(header="Last Updated", default_width=0.10),
+            TextColumnConfig(header="Steps", default_width=0.05, min_width=56),
+            TextColumnConfig(header="Result", default_width=0.09, min_width=90, alignment=left,
+                             widget_factory=self._create_result_cell),
+            TextColumnConfig(header="Run status", default_width=0.09, min_width=90, alignment=left,
+                             widget_factory=self._create_muted_cell),
+            TextColumnConfig(header="Updated", default_width=0.09, min_width=90, alignment=left,
+                             widget_factory=self._create_muted_cell),
             ActionColumnConfig(
-                header="Actions",
-                default_width=0.20,
+                header="",
+                default_width=0.12,
+                min_width=120,
                 resizable=True,
                 widget_factory=self._create_action_buttons_widget,
             ),
@@ -727,11 +777,12 @@ class TestCaseMainWindow(QWidget):
         self.table_widget = DataTableWidget(
             column_configs=column_configs,
             model=self.table_model,
-            item_height=40,
-            header_height=60,
+            item_height=52,
+            header_height=44,
             items_per_page=15,
             highlight_selected_row=True,
         )
+        self.table_model.data_changed.connect(self._update_summary)
 
         # Thêm table widget vào container
         table_layout = QVBoxLayout(self.table_container)
@@ -973,7 +1024,7 @@ class TestCaseMainWindow(QWidget):
             if status == "running":
                 result_text = "Running..."
                 # Set the row color to blue to indicate it's active
-                self.table_widget.set_row_color(row_index, RowColor.BLUE)
+                self.table_widget.set_row_color(row_index, RowColor.YELLOW)
 
             elif status in ["passed", "completed"]:
                 result_text = "Passed"
@@ -992,7 +1043,7 @@ class TestCaseMainWindow(QWidget):
 
             elif status == "cancelled":
                 result_text = "Cancelled"
-                self.table_widget.set_row_color(row_index, RowColor.YELLOW)
+                self.table_widget.set_row_color(row_index, RowColor.OFF_WHITE)
 
             # Update the text in the table cells
             self.table_model.update_cell(row_index, 5, result_text)
@@ -1008,23 +1059,17 @@ class TestCaseMainWindow(QWidget):
         test_case = cell_data  # cell_data is the full dictionary for the test case
         action_widget = QWidget()
         layout = QHBoxLayout(action_widget)
-        layout.setContentsMargins(5, 0, 5, 0)
-        layout.setSpacing(5)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-        view_btn = QPushButton("👁 View")
-        view_btn.setObjectName("BlueButton")
-        view_btn.setToolTip("View Details")
+        view_btn = ui_kit.icon_button("eye", "View details")
         view_btn.clicked.connect(lambda checked, tc=test_case: self.view_test_case(tc))
 
-        edit_btn = QPushButton("✏ Edit")
-        edit_btn.setObjectName("GreenButton")
-        edit_btn.setToolTip("Edit Test Case")
+        edit_btn = ui_kit.icon_button("edit", "Edit test case")
         edit_btn.clicked.connect(lambda checked, tc=test_case: self.edit_test_case(tc))
 
-        history_btn = QPushButton("📊 History")
-        history_btn.setObjectName("YellowButton")
-        history_btn.setToolTip("View Execution History")
+        history_btn = ui_kit.icon_button("history", "Execution history")
         history_btn.clicked.connect(
             lambda checked, tc=test_case: self.view_execution_history(tc)
         )
@@ -1036,168 +1081,115 @@ class TestCaseMainWindow(QWidget):
         return action_widget
 
     def view_test_case(self, test_case):
-        """View test case details with enhanced visual design and layout."""
+        """Show a test case: result up top, details and screenshots below."""
         try:
-            test_case_name = test_case.get("test_case", "Unknown Test Case")
+            from PySide6.QtWidgets import QGridLayout
 
-            # Find latest screenshots for this test case
+            test_case_name = test_case.get("test_case", "Unknown Test Case")
             screenshots, latest_dir = self._find_latest_screenshots_for_test(test_case)
 
-            # Create enhanced dialog with modern styling
             dialog = QDialog(self)
             dialog.setWindowTitle("Test Case Details")
             dialog.setModal(True)
-            dialog.setMinimumSize(600, 500)
-            dialog.setMaximumSize(800, 700)
+            dialog.setMinimumWidth(560)
+            dialog.setMaximumSize(820, 760)
 
-            # Apply modern dialog styling
-            dialog.setStyleSheet(
-                """
-                QDialog {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #f8f9fa, stop: 1 #e9ecef);
-                    border-radius: 10px;
-                }
-                QLabel#titleLabel {
-                    font-size: 18px;
-                    font-weight: bold;
-                    color: #2c3e50;
-                    padding: 10px;
-                    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                              stop: 0 #3498db, stop: 1 #2980b9);
-                    color: white;
-                    border-radius: 8px;
-                    margin-bottom: 10px;
-                }
-                QFrame#cardFrame {
-                    background: white;
-                    border: 1px solid #dee2e6;
-                    border-radius: 8px;
-                    margin: 5px;
-                    padding: 10px;
-                }
-                QLabel#sectionHeader {
-                    font-size: 14px;
-                    font-weight: bold;
-                    color: #495057;
-                    padding: 5px 0px;
-                    border-bottom: 2px solid #e9ecef;
-                    margin-bottom: 10px;
-                }
-                QPushButton#actionButton {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #28a745, stop: 1 #218838);
-                    color: white;
-                    border: none;
-                    padding: 12px 20px;
-                    border-radius: 6px;
-                    font-weight: bold;
-                    min-width: 120px;
-                }
-                QPushButton#actionButton:hover {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #34ce57, stop: 1 #28a745);
-                }
-                QPushButton#actionButton:pressed {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #218838, stop: 1 #1e7e34);
-                }
-                QPushButton#actionButton:disabled {
-                    background: #6c757d;
-                    color: #adb5bd;
-                }
-                QPushButton#galleryButton {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #17a2b8, stop: 1 #138496);
-                    color: white;
-                    border: none;
-                    padding: 12px 20px;
-                    border-radius: 6px;
-                    font-weight: bold;
-                    min-width: 120px;
-                }
-                QPushButton#galleryButton:hover {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #1dc3d9, stop: 1 #17a2b8);
-                }
-                QPushButton#galleryButton:disabled {
-                    background: #6c757d;
-                    color: #adb5bd;
-                }
-                QPushButton#closeButton {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #6c757d, stop: 1 #5a6268);
-                    color: white;
-                    border: none;
-                    padding: 12px 20px;
-                    border-radius: 6px;
-                    font-weight: bold;
-                    min-width: 100px;
-                }
-                QPushButton#closeButton:hover {
-                    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                              stop: 0 #7d8691, stop: 1 #6c757d);
-                }
-            """
+            outer = QVBoxLayout(dialog)
+            outer.setContentsMargins(20, 20, 20, 20)
+            outer.setSpacing(16)
+
+            card = ui_kit.Card(padding=0, spacing=0)
+            outer.addWidget(card)
+
+            # Header: field / type, result, test case text
+            result_text = self._latest_result_text(test_case)
+            tone = self._result_tone(result_text)
+            head = ui_kit.centered_header(
+                " \u00b7 ".join(
+                    p for p in [test_case.get("test_field", ""), test_case.get("test_type", "")] if p
+                ) or "Test case",
+                result_text,
+                test_case_name,
             )
+            head.big_label.setProperty("tone", tone)
+            ui_kit.repolish(head.big_label)
+            card.body.addWidget(head)
 
-            # Main layout with proper spacing
-            main_layout = QVBoxLayout(dialog)
-            main_layout.setContentsMargins(20, 20, 20, 20)
-            main_layout.setSpacing(15)
+            # Details
+            details = ui_kit.CardSection(padding=(24, 18, 24, 18), spacing=10)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(16)
+            grid.setVerticalSpacing(10)
+            grid.setColumnStretch(1, 1)
 
-            # Title section with icon
-            title_label = QLabel(f"🔍 {test_case_name}")
-            title_label.setObjectName("titleLabel")
-            title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            main_layout.addWidget(title_label)
+            def add_row(row, key, value):
+                grid.addWidget(ui_kit.label(key, "FieldLabel"), row, 0, Qt.AlignmentFlag.AlignTop)
+                shown = str(value) if value not in [None, "", "N/A"] else "Not specified"
+                value_lbl = ui_kit.label(shown, "BodyText" if shown != "Not specified" else "MutedText", wrap=True)
+                value_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                grid.addWidget(value_lbl, row, 1)
 
-            # Test Case Information Card
-            info_frame = self._create_info_card(test_case)
-            main_layout.addWidget(info_frame)
+            add_row(0, "Expected result", test_case.get("test_expect", ""))
+            add_row(1, "Reference data", test_case.get("test_reference", ""))
+            add_row(2, "Steps", test_case.get("step_number", 0))
+            details.body.addLayout(grid)
+            card.body.addWidget(details)
 
-            # Screenshots Card
-            screenshot_frame = self._create_screenshot_card(screenshots, latest_dir)
-            main_layout.addWidget(screenshot_frame)
+            dotted = QHBoxLayout()
+            dotted.setContentsMargins(24, 0, 24, 0)
+            dotted.addWidget(ui_kit.divider(dotted=True))
+            card.body.addLayout(dotted)
 
-            # Action buttons with enhanced styling
+            # Screenshots
+            shots = ui_kit.CardSection(padding=(24, 16, 24, 18), spacing=6)
+            if screenshots and latest_dir:
+                folder = os.path.join(
+                    os.path.basename(os.path.dirname(latest_dir)), os.path.basename(latest_dir)
+                )
+                shots.body.addWidget(ui_kit.StatRow(f"{len(screenshots)} screenshot(s) from the last run", "", "ok"))
+                shots.body.addWidget(ui_kit.label(folder, "MutedText", wrap=True))
+            else:
+                shots.body.addWidget(ui_kit.StatRow("No screenshots yet", "", "none"))
+                shots.body.addWidget(ui_kit.label("Run this test case to capture screenshots.", "MutedText", wrap=True))
+            card.body.addWidget(shots)
+
+            # Technical details (small, muted)
+            def fmt(ts):
+                try:
+                    return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
+                except Exception:  # noqa: BLE001 - display only
+                    return ts or "\u2014"
+
+            case_id = test_case.get("uuid") or test_case.get("id") or "\u2014"
+            tech = ui_kit.label(
+                f"ID {case_id}  \u00b7  "
+                f"created {fmt(test_case.get('created_at'))}  \u00b7  updated {fmt(test_case.get('updated_at'))}",
+                "MutedText",
+                wrap=True,
+            )
+            tech.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            outer.addWidget(tech)
+
+            # Buttons
             buttons_layout = QHBoxLayout()
-            buttons_layout.setSpacing(10)
-            buttons_layout.addStretch()
-
-            # Screenshot viewer button
-            open_btn = QPushButton("🖼️ View Screenshots")
-            open_btn.setObjectName("actionButton")
-            open_btn.setEnabled(bool(screenshots))
-            open_btn.setToolTip("Open screenshot viewer for detailed examination")
-
-            # Gallery view button
-            gallery_btn = QPushButton("📷 Gallery View")
-            gallery_btn.setObjectName("galleryButton")
+            buttons_layout.setSpacing(8)
+            gallery_btn = ui_kit.button("Gallery", "secondary", "images")
             gallery_btn.setEnabled(bool(screenshots))
             gallery_btn.setToolTip("Browse screenshots in gallery mode")
-
-            # Close button
-            close_btn = QPushButton("✖️ Close")
-            close_btn.setObjectName("closeButton")
-            close_btn.setToolTip("Close this dialog")
+            open_btn = ui_kit.button("View screenshots", "primary", "arrow-right", icon_right=True)
+            open_btn.setEnabled(bool(screenshots))
+            open_btn.setToolTip("Open screenshot viewer for detailed examination")
+            close_btn = ui_kit.button("Close", "neutral")
 
             def open_screenshots():
                 try:
-                    # Use the fixed screenshot viewer instead of the problematic one
-                    viewer = ScreenshotViewerDialog(
-                        test_case_name, screenshots, parent=self
-                    )
-                    logger.info(
-                        f"Opening screenshot viewer with {len(screenshots)} screenshots"
-                    )
+                    viewer = ScreenshotViewerDialog(test_case_name, screenshots, parent=self)
+                    logger.info(f"Opening screenshot viewer with {len(screenshots)} screenshots")
                     viewer.exec()
                 except Exception as e:
                     logger.error("Error opening screenshots: %s", str(e))
                     QMessageBox.critical(
-                        self,
-                        "Screenshot Viewer Error",
-                        f"Failed to open screenshot viewer:\n{str(e)}",
+                        self, "Screenshot Viewer Error", f"Failed to open screenshot viewer:\n{str(e)}"
                     )
 
             def open_gallery_view():
@@ -1205,36 +1197,17 @@ class TestCaseMainWindow(QWidget):
                     self.open_screenshot_gallery(test_case_name, screenshots)
                 except Exception as e:
                     logger.error("Error opening gallery view: %s", str(e))
-                    QMessageBox.critical(
-                        self, "Gallery Error", f"Failed to open gallery view:\n{str(e)}"
-                    )
+                    QMessageBox.critical(self, "Gallery Error", f"Failed to open gallery view:\n{str(e)}")
 
             open_btn.clicked.connect(open_screenshots)
             gallery_btn.clicked.connect(open_gallery_view)
             close_btn.clicked.connect(dialog.accept)
 
-            buttons_layout.addWidget(open_btn)
-            buttons_layout.addWidget(gallery_btn)
             buttons_layout.addWidget(close_btn)
-            main_layout.addLayout(buttons_layout)
-
-            # Add subtle animation effect on show
-            dialog.setWindowOpacity(0.0)
-            dialog.show()
-
-            # Simple fade-in effect
-            from PySide6.QtCore import QTimer
-
-            def fade_in():
-                current_opacity = dialog.windowOpacity()
-                if current_opacity < 1.0:
-                    dialog.setWindowOpacity(min(1.0, current_opacity + 0.1))
-                else:
-                    fade_timer.stop()
-
-            fade_timer = QTimer()
-            fade_timer.timeout.connect(fade_in)
-            fade_timer.start(30)  # 30ms intervals for smooth animation
+            buttons_layout.addStretch()
+            buttons_layout.addWidget(gallery_btn)
+            buttons_layout.addWidget(open_btn)
+            outer.addLayout(buttons_layout)
 
             dialog.exec()
 
@@ -1242,220 +1215,14 @@ class TestCaseMainWindow(QWidget):
             logger.error("Error viewing test case: %s", str(e))
             QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
 
-    def _create_info_card(self, test_case) -> QWidget:
-        """Create a styled information card for test case details."""
-        from PySide6.QtWidgets import QFrame, QGridLayout
-
-        frame = QFrame()
-        frame.setObjectName("cardFrame")
-
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
-
-        # Section header
-        header = QLabel("📋 Test Case Information")
-        header.setObjectName("sectionHeader")
-        layout.addWidget(header)
-
-        # Create grid for organized information display
-        grid_layout = QGridLayout()
-        grid_layout.setHorizontalSpacing(20)
-        grid_layout.setVerticalSpacing(8)
-
-        # Helper function to add field to grid
-        def add_field(row, label_text, value, icon=""):
-            label = QLabel(f"{icon} <b>{label_text}:</b>")
-            label.setStyleSheet("color: #495057; font-size: 12px;")
-
-            value_label = QLabel(
-                str(value) if value not in [None, "", "N/A"] else "<i>Not specified</i>"
-            )
-            value_label.setStyleSheet(
-                "color: #212529; font-size: 12px; padding-left: 10px;"
-            )
-            value_label.setWordWrap(True)
-
-            grid_layout.addWidget(label, row, 0, Qt.AlignmentFlag.AlignTop)
-            grid_layout.addWidget(value_label, row, 1, Qt.AlignmentFlag.AlignTop)
-
-        # Add fields with icons
-        add_field(0, "Field", test_case.get("test_field", "N/A"), "🏷️")
-        add_field(1, "Type", test_case.get("test_type", "N/A"), "⚙️")
-        add_field(2, "Test Case", test_case.get("test_case", "N/A"), "📝")
-        add_field(3, "Reference", test_case.get("test_reference", "N/A"), "🔗")
-        add_field(4, "Expected Result", test_case.get("test_expect", "N/A"), "✅")
-
-        layout.addLayout(grid_layout)
-
-        # Technical details section
-        tech_header = QLabel("🔧 Technical Details")
-        tech_header.setObjectName("sectionHeader")
-        tech_header.setStyleSheet("margin-top: 15px;")
-        layout.addWidget(tech_header)
-
-        tech_grid = QGridLayout()
-        tech_grid.setHorizontalSpacing(20)
-        tech_grid.setVerticalSpacing(5)
-
-        # Format dates nicely
-        created_at = test_case.get("created_at", "N/A")
-        updated_at = test_case.get("updated_at", "N/A")
-
-        if created_at and created_at != "N/A":
-            try:
-                from datetime import datetime
-
-                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                created_at = dt.strftime("%Y-%m-%d %H:%M")
-            except Exception as e:
-                logger.error("Error parsing created_at: %s", e)
-
-        if updated_at and updated_at != "N/A":
-            try:
-                from datetime import datetime
-
-                dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-                updated_at = dt.strftime("%Y-%m-%d %H:%M")
-            except Exception as e:
-                logger.error("Error parsing updated_at: %s", e)
-
-        # add_field_to_layout = lambda row, label_text, value, icon="": (
-        #     tech_grid.addWidget(
-        #         QLabel(f"{icon} <b>{label_text}:</b>").setStyleSheet(
-        #             "color: #6c757d; font-size: 11px;"
-        #         )
-        #         or QLabel(f"{icon} <b>{label_text}:</b>"),
-        #         row,
-        #         0,
-        #     ),
-        #     tech_grid.addWidget(
-        #         QLabel(
-        #             f"<code>{value}</code>"
-        #             if value not in [None, "", "N/A"]
-        #             else "<i>Not available</i>"
-        #         ).setStyleSheet(
-        #             "color: #495057; font-size: 11px; font-family: monospace;"
-        #         )
-        #         or QLabel(
-        #             f"<code>{value}</code>"
-        #             if value not in [None, "", "N/A"]
-        #             else "<i>Not available</i>"
-        #         ),
-        #         row,
-        #         1,
-        #     ),
-        # )
-
-        # Create technical detail labels properly
-        tech_labels = [
-            ("🆔", "ID", test_case.get("id", "N/A")),
-            ("🏷️", "UUID", test_case.get("uuid", "N/A")),
-            ("📅", "Created", created_at),
-            ("🔄", "Updated", updated_at),
-        ]
-
-        for i, (icon, label_text, value) in enumerate(tech_labels):
-            label = QLabel(f"{icon} <b>{label_text}:</b>")
-            label.setStyleSheet("color: #6c757d; font-size: 11px;")
-
-            value_label = QLabel(
-                f"<code>{value}</code>"
-                if value not in [None, "", "N/A"]
-                else "<i>Not available</i>"
-            )
-            value_label.setStyleSheet(
-                "color: #495057; font-size: 11px; font-family: monospace;"
-            )
-
-            tech_grid.addWidget(label, i, 0)
-            tech_grid.addWidget(value_label, i, 1)
-
-        layout.addLayout(tech_grid)
-
-        return frame
-
-    def _create_screenshot_card(self, screenshots, latest_dir) -> QWidget:
-        """Create a styled card for screenshot information."""
-        from PySide6.QtWidgets import QFrame
-
-        frame = QFrame()
-        frame.setObjectName("cardFrame")
-
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
-
-        # Section header
-        header = QLabel("📸 Screenshot Information")
-        header.setObjectName("sectionHeader")
-        layout.addWidget(header)
-
-        if screenshots and latest_dir:
-            # Screenshots available
-            status_label = QLabel("✅ <b>Screenshots Available</b>")
-            status_label.setStyleSheet(
-                "color: #28a745; font-size: 13px; margin-bottom: 5px;"
-            )
-            layout.addWidget(status_label)
-
-            count_label = QLabel(f"📊 <b>Count:</b> {len(screenshots)} screenshot(s)")
-            count_label.setStyleSheet("color: #495057; font-size: 12px;")
-            layout.addWidget(count_label)
-
-            # Extract just the folder name from the full path
-            try:
-                import os
-
-                folder_name = os.path.basename(latest_dir)
-                parent_folder = os.path.basename(os.path.dirname(latest_dir))
-                path_info = f"{parent_folder}/{folder_name}"
-            except Exception as e:
-                logger.error("Error extracting folder name from path: %s", e)
-                path_info = latest_dir
-
-            location_label = QLabel(
-                f"📁 <b>Latest Folder:</b> <code>{path_info}</code>"
-            )
-            location_label.setStyleSheet(
-                "color: #495057; font-size: 12px; font-family: monospace;"
-            )
-            location_label.setWordWrap(True)
-            layout.addWidget(location_label)
-
-            # Preview info
-            preview_label = QLabel(
-                "💡 <i>Use the buttons below to view screenshots in different modes</i>"
-            )
-            preview_label.setStyleSheet(
-                "color: #6c757d; font-size: 11px; font-style: italic; margin-top: 5px;"
-            )
-            layout.addWidget(preview_label)
-
-        else:
-            # No screenshots
-            status_label = QLabel("❌ <b>No Screenshots Found</b>")
-            status_label.setStyleSheet(
-                "color: #dc3545; font-size: 13px; margin-bottom: 5px;"
-            )
-            layout.addWidget(status_label)
-
-            info_label = QLabel(
-                "📝 No test execution screenshots have been captured for this test case yet."
-            )
-            info_label.setStyleSheet("color: #6c757d; font-size: 12px;")
-            info_label.setWordWrap(True)
-            layout.addWidget(info_label)
-
-            suggestion_label = QLabel(
-                "💡 <i>Run this test case to generate screenshots automatically</i>"
-            )
-            suggestion_label.setStyleSheet(
-                "color: #6c757d; font-size: 11px; font-style: italic; margin-top: 10px;"
-            )
-            layout.addWidget(suggestion_label)
-
-        return frame
+    def _latest_result_text(self, test_case: Dict) -> str:
+        """The result shown in the table for this test case (falls back to the API field)."""
+        for i, tc in enumerate(self.test_cases):
+            if tc is test_case or (tc.get("uuid") and tc.get("uuid") == test_case.get("uuid")):
+                row = self.table_model.get_row(i)
+                if row and len(row) > 5 and row[5]:
+                    return str(row[5])
+        return str(test_case.get("test_result") or "Pending")
 
     def open_screenshot_gallery(self, test_case_name: str, screenshots: List[str]):
         """
@@ -1472,7 +1239,8 @@ class TestCaseMainWindow(QWidget):
 
             # Create layout for the dialog
             dialog_layout = QVBoxLayout(gallery_dialog)
-            dialog_layout.setContentsMargins(10, 10, 10, 10)
+            dialog_layout.setContentsMargins(20, 20, 20, 20)
+            dialog_layout.setSpacing(12)
 
             # Create and configure the gallery widget
             gallery_widget = ScreenshotGalleryWidget(parent=gallery_dialog)
@@ -1504,7 +1272,7 @@ class TestCaseMainWindow(QWidget):
             # Add dialog control buttons
             button_layout = QHBoxLayout()
 
-            close_btn = QPushButton("✖ Close")
+            close_btn = ui_kit.button("Close", "neutral")
             close_btn.clicked.connect(gallery_dialog.accept)
 
             button_layout.addStretch()
@@ -1535,57 +1303,26 @@ class TestCaseMainWindow(QWidget):
             dialog.setWindowTitle(f"Execution History: {test_case_name}")
             dialog.setModal(True)
             dialog.setMinimumSize(950, 650)
-            dialog.setStyleSheet(
-                """
-                QDialog {
-                    background-color: #F0F4F8;
-                    font-family: Arial, sans-serif;
-                }
-                QLabel#TitleLabel {
-                    font-size: 18pt;
-                    font-weight: bold;
-                    color: #1A237E;
-                    padding: 5px;
-                }
-                QGroupBox {
-                    font-size: 12pt;
-                    font-weight: bold;
-                    color: #333;
-                    border: 2px solid #B0BEC5;
-                    border-radius: 8px;
-                    margin-top: 10px;
-                }
-                QGroupBox::title {
-                    subcontrol-origin: margin;
-                    subcontrol-position: top left;
-                    padding: 0 10px;
-                    background-color: #F0F4F8;
-                }
-            """
-            )
 
             main_layout = QVBoxLayout(dialog)
-            main_layout.setContentsMargins(15, 15, 15, 15)
-            main_layout.setSpacing(15)
+            main_layout.setContentsMargins(24, 24, 24, 20)
+            main_layout.setSpacing(12)
 
-            title_label = QLabel("📊 Execution History")
-            title_label.setObjectName("TitleLabel")
-            subtitle_label = QLabel(f"{test_case_name}")
-            subtitle_label.setStyleSheet("font-size: 11pt; color: #555;")
+            title_label = ui_kit.label("Execution history", "PageTitle")
+            subtitle_label = ui_kit.label(f"{test_case_name}", "PageSubtitle", wrap=True)
 
             main_layout.addWidget(title_label)
             main_layout.addWidget(subtitle_label)
 
-            history_groupbox = QGroupBox("Execution Details")
+            history_groupbox = ui_kit.Card(padding=16, spacing=8)
 
             history_groupbox.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
             )
-            groupbox_layout = QVBoxLayout(history_groupbox)
+            groupbox_layout = history_groupbox.body
 
-            loading_label = QLabel("🔄 Loading history, please wait...")
+            loading_label = ui_kit.label("Loading history, please wait...", "MutedText")
             loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            loading_label.setStyleSheet("font-size: 14pt; color: #666;")
             groupbox_layout.addWidget(loading_label)
 
             history_table = self._setup_history_table()
@@ -1593,8 +1330,7 @@ class TestCaseMainWindow(QWidget):
             groupbox_layout.addWidget(history_table)
             main_layout.addWidget(history_groupbox)
 
-            close_btn = QPushButton("✖ Close")
-            close_btn.setStyleSheet(self._get_button_style("danger"))
+            close_btn = ui_kit.button("Close", "neutral")
             close_btn.clicked.connect(dialog.accept)
 
             button_layout = QHBoxLayout()
@@ -1611,8 +1347,9 @@ class TestCaseMainWindow(QWidget):
 
             def on_history_failed(operation: str, error_msg: str):
                 if operation == "get_execution_history":
-                    loading_label.setText(f"❌ Failed to load history: {error_msg}")
-                    loading_label.setStyleSheet("font-size: 14pt; color: #D32F2F;")
+                    loading_label.setText(f"Failed to load history: {error_msg}")
+                    loading_label.setObjectName("WarningText")
+                    ui_kit.repolish(loading_label)
 
             if self.current_project:
                 worker = TestCaseMainWorker(
@@ -1624,7 +1361,7 @@ class TestCaseMainWindow(QWidget):
                 worker.operation_failed.connect(on_history_failed)
                 worker.start()
             else:
-                loading_label.setText("⚠️ No project selected.")
+                loading_label.setText("No project selected.")
 
             dialog.exec()
 
@@ -1642,38 +1379,6 @@ class TestCaseMainWindow(QWidget):
         table_view.setShowGrid(False)
         table_view.verticalHeader().hide()
         table_view.setSortingEnabled(True)
-
-        table_view.setStyleSheet(
-            """
-            QTableView {
-                background-color: #FFFFFF;
-                border: 1px solid #CFD8DC;
-                border-radius: 6px;
-                font-size: 11pt;
-            }
-            QHeaderView::section {
-                background-color: #455A64;
-                color: white;
-                padding: 8px;
-                font-weight: bold;
-                border: none;
-            }
-            QTableView::item {
-                padding: 8px;
-                border-bottom: 1px solid #F1F1F1;
-            }
-            QTableView::item:selected {
-                background-color: #BBDEFB;
-                color: #1A237E;
-            }
-            QScrollBar:vertical {
-                border: none; background: #ECEFF1; width: 12px;
-            }
-            QScrollBar::handle:vertical {
-                background: #90A4AE; min-height: 20px; border-radius: 6px;
-            }
-        """
-        )
 
         header = table_view.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -1710,13 +1415,19 @@ class TestCaseMainWindow(QWidget):
         for result in test_results:
             status = result.get("status", "unknown").title()
             status_item = QStandardItem(status)
+            from PySide6.QtGui import QColor
+
             color_map = {
-                "Passed": Qt.GlobalColor.darkGreen,
-                "Completed": Qt.GlobalColor.darkGreen,
-                "Failed": Qt.GlobalColor.darkRed,
-                "Error": Qt.GlobalColor.darkRed,
+                "Passed": QColor(tokens.PRIMARY_TEXT),
+                "Completed": QColor(tokens.PRIMARY_TEXT),
+                "Failed": QColor(tokens.DANGER_TEXT),
+                "Error": QColor(tokens.DANGER_TEXT),
             }
             status_item.setForeground(color_map.get(status, Qt.GlobalColor.black))
+            status_font = status_item.font()
+            status_font.setFamily(tokens.FONT_UI)
+            status_font.setBold(True)
+            status_item.setFont(status_font)
 
             timestamp_str = result.get("end_time") or result.get("start_time", "N/A")
             try:
@@ -1768,8 +1479,7 @@ class TestCaseMainWindow(QWidget):
 
             if count > 0:
                 row_index = model.rowCount() - 1
-                view_btn = QPushButton("🖼️ View Screenshots")
-                view_btn.setStyleSheet(self._get_button_style("primary", compact=True))
+                view_btn = ui_kit.button("View screenshots", "secondary", small=True)
                 view_btn.clicked.connect(
                     lambda checked=False, s=screenshots_list, name=result.get(
                         "test_name"
@@ -1788,44 +1498,6 @@ class TestCaseMainWindow(QWidget):
             QMessageBox.critical(
                 self, "Error", f"Could not open screenshot viewer:\n{str(e)}"
             )
-
-    def _get_button_style(self, style_type: str, compact: bool = False) -> str:
-        padding = "5px 10px" if compact else "10px 20px"
-        font_size = "10pt" if compact else "12pt"
-        min_width = "80px" if compact else "100px"
-
-        styles = {
-            "primary": ("#4A90E2", "#357ABD", "#2E5A87"),
-            "danger": ("#DC3545", "#C82333", "#BD2130"),
-        }
-
-        if style_type not in styles:
-            return ""
-
-        bg_color, hover_color, pressed_color = styles[style_type]
-
-        return f"""
-            QPushButton {{
-                background-color: {bg_color};
-                color: white;
-                font-size: {font_size};
-                font-weight: bold;
-                border-radius: 5px;
-                padding: {padding};
-                border: none;
-                min-width: {min_width};
-            }}
-            QPushButton:hover {{
-                background-color: {hover_color};
-            }}
-            QPushButton:pressed {{
-                background-color: {pressed_color};
-            }}
-            QPushButton:disabled {{
-                background-color: #CCCCCC;
-                color: #666666;
-            }}
-        """
 
     def edit_test_case(self, test_case):
         """Edit test case using the existing dialog"""
@@ -2038,13 +1710,6 @@ class TestCaseMainWindow(QWidget):
         self.stop_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.stop_dialog.setCancelButton(None)
         self.stop_dialog.setMinimumDuration(0)
-
-        self.stop_dialog.setStyleSheet(
-            """
-            QProgressBar { text-align: center; }
-            QProgressBar::chunk { background-color: #dc3545; }
-        """
-        )
 
         self.stop_dialog.show()
         self.worker.finished.connect(self._on_worker_finished_gracefully)

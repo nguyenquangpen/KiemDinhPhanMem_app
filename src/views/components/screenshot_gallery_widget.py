@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
 
 from services.logging_config import get_logger
 
+from views.components import ui_kit
+
 logger = get_logger("screenshot_gallery")
 
 
@@ -64,17 +66,7 @@ class ScreenshotGalleryWidget(QWidget):
         title_layout = QHBoxLayout()
 
         self.titleLabel = QLabel("Screenshots")
-        self.titleLabel.setObjectName("TitleLabel")
-        self.titleLabel.setStyleSheet(
-            """
-            QLabel {
-                font-size: 18pt;
-                font-weight: bold;
-                color: #203532;
-                margin-bottom: 10px;
-            }
-        """
-        )
+        self.titleLabel.setObjectName("CardTitle")
         title_layout.addWidget(self.titleLabel)
 
         title_layout.addStretch()
@@ -99,24 +91,12 @@ class ScreenshotGalleryWidget(QWidget):
 
                 # Image display label
                 label = QLabel()
-                label.setObjectName(f"screenshotDisplayLabel{row*2 + col + 1}")
+                label.setObjectName("ScreenshotPreviewLabel")
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
                 label.setMinimumSize(250, 200)
                 label.setMaximumSize(350, 280)
                 label.setScaledContents(False)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setStyleSheet(
-                    """
-                    QLabel {
-                        background-color: #FFFFFF;
-                        border: 2px solid #CCCCCC;
-                        border-radius: 8px;
-                        padding: 10px;
-                    }
-                    QLabel:hover {
-                        border: 2px solid #4A90E2;
-                    }
-                """
-                )
 
                 container_layout.addWidget(label)
                 gallery_layout.addWidget(container, row, col)
@@ -127,68 +107,19 @@ class ScreenshotGalleryWidget(QWidget):
         # Navigation section
         nav_layout = QHBoxLayout()
 
-        self.prevButton = QPushButton("◀ Previous")
-        self.prevButton.setObjectName("GrayButton")
-        self.prevButton.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #6C757D;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5A6268;
-            }
-            QPushButton:disabled {
-                background-color: #CCCCCC;
-                color: #666666;
-            }
-        """
-        )
+        self.prevButton = ui_kit.button("Previous", "neutral", "chevron-left")
 
         nav_layout.addWidget(self.prevButton)
 
         # Page info
         self.pageInfoLabel = QLabel("Page 1 of 1")
         self.pageInfoLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pageInfoLabel.setStyleSheet(
-            """
-            QLabel {
-                font-size: 14pt;
-                font-weight: bold;
-                color: #203532;
-                margin: 0 20px;
-            }
-        """
-        )
+        self.pageInfoLabel.setObjectName("PaginationInfo")
         nav_layout.addStretch()
         nav_layout.addWidget(self.pageInfoLabel)
         nav_layout.addStretch()
 
-        self.nextButton = QPushButton("Next ▶")
-        self.nextButton.setObjectName("GrayButton")
-        self.nextButton.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #6C757D;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5A6268;
-            }
-            QPushButton:disabled {
-                background-color: #CCCCCC;
-                color: #666666;
-            }
-        """
-        )
+        self.nextButton = ui_kit.button("Next", "neutral", "chevron-right", icon_right=True)
 
         nav_layout.addWidget(self.nextButton)
 
@@ -334,6 +265,7 @@ class ScreenshotGalleryWidget(QWidget):
 
             # Create fullscreen dialog
             fullscreen_dialog = QDialog(self)
+            fullscreen_dialog.setObjectName("FullscreenViewer")
             fullscreen_dialog.setWindowTitle("Screenshot Viewer")
             fullscreen_dialog.setWindowState(Qt.WindowState.WindowMaximized)
 
@@ -362,22 +294,7 @@ class ScreenshotGalleryWidget(QWidget):
             layout.addWidget(image_label)
 
             # Close button
-            close_btn = QPushButton("✖ Close (ESC)")
-            close_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #DC3545;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 10px 20px;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #C82333;
-                }
-            """
-            )
+            close_btn = ui_kit.button("Close (Esc)", "neutral", "x")
             close_btn.clicked.connect(fullscreen_dialog.close)
 
             # ESC key handling

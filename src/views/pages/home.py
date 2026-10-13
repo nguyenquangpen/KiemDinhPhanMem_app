@@ -1,8 +1,19 @@
 # my_app/views/home.py
 from typing import Union
 
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QMainWindow, QStackedWidget, QMessageBox
+from html import escape
+
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QStackedWidget,
+    QWidget,
+)
+
+from asset import tokens
 
 from models.data_classes import Project, User
 from models.database import DataManager
@@ -63,6 +74,11 @@ PAGES_REQUIRING_PROJECT = {
     "ts_component_vp": ComponentViewpointWidget,
 }
 
+# Below this window width the sidebar collapses to icons so pages keep room for their tables.
+AUTO_COLLAPSE_WIDTH = 1320
+MIN_WINDOW_WIDTH = 1180
+
+
 class MainWindow(QMainWindow):
     def __init__(self, data_manager: DataManager, parent=None):
         super().__init__(parent)
@@ -71,8 +87,11 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Test Management System")
-        self.resize(800, 600)
+        self.setMinimumWidth(MIN_WINDOW_WIDTH)
+        self.resize(1360, 860)
+        self._was_narrow = False
         self.sidebar_widget = SidebarWidget(SIDEBAR_STRUCTURE)
+        self.top_bar = self._build_top_bar()
 
         # Cache to store created page widgets
         self.page_widgets = {}
@@ -88,20 +107,72 @@ class MainWindow(QMainWindow):
     def _integrate_widgets(self):
         logger.info("Integrating sidebar widget and stacked widget into MainWindow")
         self.ui.windowLayout.insertWidget(0, self.sidebar_widget)
+        self.ui.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.mainLayout.setSpacing(0)
+        self.ui.mainLayout.addWidget(self.top_bar)
         # Add the stacked widget to the main layout to hold the content pages
         self.ui.mainLayout.addWidget(self.main_stacked_widget)
+        self.ui.statusbar.hide()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not hasattr(self, "sidebar_widget"):
+            return
+        # Only react when crossing the threshold, so a manual toggle is kept.
+        narrow = self.width() < AUTO_COLLAPSE_WIDTH
+        if narrow != getattr(self, "_was_narrow", False):
+            self._was_narrow = narrow
+            if narrow != self.sidebar_widget.is_collapsed:
+                self.sidebar_widget.toggle_sidebar()
+
+    def _build_top_bar(self) -> QWidget:
+        bar = QWidget()
+        bar.setObjectName("TopBar")
+        bar.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        bar.setFixedHeight(56)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(32, 0, 32, 0)
+        self.breadcrumb_label = QLabel()
+        self.breadcrumb_label.setObjectName("Breadcrumb")
+        self.breadcrumb_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(self.breadcrumb_label, 1)
+        return bar
+
+    def _update_breadcrumb(self, *_args):
+        """Projects / <project> / <task> / <page>, with the last part emphasised."""
+        key = self.sidebar_widget.current_page_key() or "project_cms"
+        parts = []
+        if key == "project_cms":
+            parts = ["Workspace", "Project CMS"]
+        else:
+            project = self.db.get_current_project()
+            parts.append("Projects")
+            if project:
+                parts.append(project.name)
+            if key == "testcase_management":
+                task = self.db.get_current_task()
+                if task and getattr(task, "task_name", ""):
+                    parts.append(task.task_name)
+                parts.append("Test cases")
+            else:
+                parts.append(self.sidebar_widget.page_title(key))
+        sep = f'<span style="color:{tokens.TEXT_SUBTLE}">&nbsp;&nbsp;/&nbsp;&nbsp;</span>'
+        head = sep.join(escape(p) for p in parts[:-1])
+        last = f'<span style="color:{tokens.TEXT}; font-weight:500">{escape(parts[-1])}</span>'
+        self.breadcrumb_label.setText(head + (sep if head else "") + last)
 
     def _connect_signals(self):
         logger.info("Connecting signals for MainWindow")
         self.sidebar_widget.page_changed.connect(self._on_tab_selected)
         self.sidebar_widget.setting_requested.connect(self._handle_setting_click)
         self.db.signals.current_project_changed.connect(self.sidebar_widget.on_project_changed)
+        self.db.signals.current_project_changed.connect(self._update_breadcrumb)
+        self.db.signals.current_task_changed.connect(self._update_breadcrumb)
 
     def _set_initial_state(self):
         logger.info("Setting initial state for MainWindow")
         # Programmatically set the initial page, which will trigger _on_tab_selected
         self.sidebar_widget.set_current_page("project_cms")
-        self.sidebar_widget.page_changed.emit("project_cms")
 
     def set_user_info(self, user: Union[User, dict]):
         """Set user information including username in the sidebar."""
@@ -179,6 +250,9 @@ class MainWindow(QMainWindow):
                 widget_instance.add_task_requested.connect(
                     self._on_add_task_requested_on_project
                 )
+                widget_instance.open_viewpoints_requested.connect(
+                    lambda: self.sidebar_widget.set_current_page("ts_component_vp")
+                )
 
         # Retrieve the widget (either newly created or from cache)
         widget_to_show = self.page_widgets[key]
@@ -220,6 +294,7 @@ class MainWindow(QMainWindow):
 
         # Set the current widget in the stack to be visible
         self.main_stacked_widget.setCurrentWidget(widget_to_show)
+        self._update_breadcrumb()
 
     @Slot()
     def _on_viewpoints_changed(self):

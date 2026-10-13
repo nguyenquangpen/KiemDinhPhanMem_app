@@ -51,11 +51,9 @@ class InputField(QWidget):
             config = InputCardConfig(**config)
         self.config = config
 
-        label_font = QFont("Lexend Medium", label_font_size)
-        input_font = QFont("Lexend Medium", input_font_size)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
 
         # Label
         self.label = QLabel(config.label)
@@ -70,23 +68,11 @@ class InputField(QWidget):
         if input_type == InputType.TEXT:
             self.input_widget = QLineEdit()
             self.input_widget.setObjectName("InputFieldText")
-            self.input_widget.setFont(input_font)
             self.input_widget.setPlaceholderText(config.placeholder or "")
             self.input_widget.setText(str(config.default or ""))
 
         elif input_type in [InputType.DROPDOWN, InputType.TRUE_FALSE]:
-            # Instantiate our component with parameters to match the original style
-            self.input_widget = ComboBox(
-                bg_color="#ECF0F0",
-                border_radius=7,
-                padding=7,
-                item_bg_color="white",
-                item_selected_bg_color="#ECF0F0",
-                # Pass the specific icon paths your app uses
-                down_arrow_icon=":/png/png/down.png",
-                up_arrow_icon=":/png/png/up.png",
-            )
-            self.input_widget.setFont(input_font)
+            self.input_widget = ComboBox()
 
             if input_type == InputType.DROPDOWN:
                 dropdown_options = []
@@ -163,8 +149,8 @@ class InputCard(QWidget):
         configs: Sequence[Union[InputCardConfig, dict]],
         parent: Optional[QWidget] = None,
         save_button_text="Save",
-        field_spacing: int = 5,
-        field_height: Optional[int] = 50,
+        field_spacing: int = 14,
+        field_height: Optional[int] = 64,
         input_font_size: int = 10,
         label_font_size: int = 8,
         min_w: Optional[int] = None,
@@ -212,8 +198,9 @@ class InputCard(QWidget):
         button_layout.addStretch()
 
         self.SaveButton = QPushButton(self.save_button_text)
-        self.SaveButton.setMinimumSize(QSize(96, 34))
-        self.SaveButton.setObjectName("GreenButton")
+        self.SaveButton.setMinimumSize(QSize(120, 38))
+        self.SaveButton.setObjectName("PrimaryButton")
+        self.SaveButton.setCursor(Qt.CursorShape.PointingHandCursor)
         self.SaveButton.clicked.connect(self._on_save_clicked)
 
         button_layout.addWidget(self.SaveButton)

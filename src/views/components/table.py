@@ -45,18 +45,20 @@ from enum import Enum
 import statistics
 from pathlib import Path
 
+from asset import tokens
+from views.components import icons, ui_kit
 from views.components.add_choices_widget import MutableListWidget
 from views.components.drop_down import ComboBox
 
-# --- Color Palette (Based on the provided image) ---
-COLOR_WHITE = "#FFFFFF"
-COLOR_OFF_WHITE = "#ECF0F0"
-COLOR_LIGHT_GRAY = "#D9D9D9"
-COLOR_GREEN = "#56BB55"
-COLOR_DARK_TEXT = "#203532"
-COLOR_RED = "#F48080"
-COLOR_BLUE = "#4A90E2"
-COLOR_YELLOW = "#F9E79F"
+# --- Color Palette (design tokens, see asset/tokens.py) ---
+COLOR_WHITE = tokens.SURFACE
+COLOR_OFF_WHITE = tokens.ROW_ALT
+COLOR_LIGHT_GRAY = tokens.BORDER_STRONG
+COLOR_GREEN = tokens.PRIMARY
+COLOR_DARK_TEXT = tokens.TEXT
+COLOR_RED = tokens.DANGER
+COLOR_BLUE = tokens.SECONDARY
+COLOR_YELLOW = tokens.WARNING_SOFT
 
 class RowColor(Enum):
     """Enum to define available custom row background colors."""
@@ -323,9 +325,8 @@ class AddRowWidget(QWidget):
         self.hover_height = 30
         self.setMinimumHeight(self.initial_height)
 
-        self.add_button = QPushButton("+ Add Row", self)
-        self.add_button.setFixedSize(80, 24)
-        self.add_button.setObjectName("GreenButton")
+        self.add_button = ui_kit.button("Add row", "neutral", "plus", small=True, parent=self)
+        self.add_button.setFixedSize(96, 26)
         self.add_button.clicked.connect(self._handle_add_click)
 
         self.opacity_effect = QGraphicsOpacityEffect(self.add_button)
@@ -428,9 +429,9 @@ class AddRowWidget(QWidget):
         if not self.is_hovered:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            line_color = QColor(COLOR_GREEN)
-            line_thickness = 2
-            pen = QPen(line_color, line_thickness)
+            line_color = QColor(tokens.PRIMARY_SOFT_BORDER)
+            line_thickness = 1
+            pen = QPen(line_color, line_thickness, Qt.PenStyle.DashLine)
             painter.setPen(pen)
 
             line_y = self.initial_height // 2
@@ -462,11 +463,10 @@ class EditableCell(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel(initial_text)
-        self.label.setFont(QFont(self.font().family(), 10))
-        self.label.setAlignment(alignment)
+        self.label.setObjectName("CellText")
+        self.label.setAlignment(alignment | Qt.AlignmentFlag.AlignVCenter)
         self.label.setWordWrap(True)
         self.line_edit = QLineEdit(initial_text)
-        self.line_edit.setFont(QFont(self.font().family(), 10))
         self.line_edit.setAlignment(alignment)
         self.line_edit.hide()
         self.line_edit.editingFinished.connect(self._finish_editing)
@@ -550,6 +550,8 @@ class CalculationWidget(QWidget):
 
 
 class ResizeHandle(QWidget):
+    WIDTH = 5
+
     drag_started = Signal(int)
     dragged = Signal(int, int)
     drag_finished = Signal()
@@ -557,7 +559,7 @@ class ResizeHandle(QWidget):
     def __init__(self, parent, column_index, min_height: int):
         super().__init__(parent)
         self.column_index = column_index
-        self.setFixedWidth(5)
+        self.setFixedWidth(self.WIDTH)
         self.setMinimumHeight(min_height)
         self.setCursor(Qt.CursorShape.SplitHCursor)
         self.is_dragging = False
@@ -569,7 +571,7 @@ class ResizeHandle(QWidget):
         center_x, padding = self.width() // 2, 8
         if self.height() > padding * 2:
             line_rect = QRect(center_x - 1, padding, 2, self.height() - 2 * padding)
-            painter.setBrush(QColor(COLOR_OFF_WHITE))
+            painter.setBrush(QColor(tokens.BORDER))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRoundedRect(line_rect, 1, 1)
 
@@ -614,6 +616,8 @@ class HeaderWidget(QWidget):
             header_height,
         )
         self.setFixedHeight(self.header_height)
+        self.setObjectName("DataTableHeader")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.grid_layout = QGridLayout(self)
         self.grid_layout.setContentsMargins(0, 0, 0, 0)
         self.grid_layout.setSpacing(0)
@@ -622,9 +626,9 @@ class HeaderWidget(QWidget):
     def _build_header(self):
         for i, config in enumerate(self.column_configs):
             label = QLabel(config.header)
-            label.setFont(QFont(self.font().family(), 10, QFont.Weight.DemiBold))
             label.setMinimumHeight(self.header_height)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            horizontal = config.alignment & Qt.AlignmentFlag.AlignHorizontal_Mask
+            label.setAlignment(horizontal | Qt.AlignmentFlag.AlignVCenter)
             if i == 0:
                 label.setObjectName("TableHeaderFirst")
             elif i == len(self.column_configs) - 1:
@@ -654,6 +658,11 @@ class HeaderWidget(QWidget):
             self.grid_layout.setColumnMinimumWidth(
                 i * 2, self.column_configs[i].min_width
             )
+
+        # Odd grid columns hold the resize handles; keep them the same width as the
+        # gaps in the data grid so header and cells line up.
+        for i in range(len(self.column_configs) - 1):
+            self.grid_layout.setColumnMinimumWidth(i * 2 + 1, ResizeHandle.WIDTH)
 
         # Add a stretch item at the end to push columns to the left
         self.grid_layout.setColumnStretch(len(self.column_configs) * 2, 1)
@@ -692,16 +701,16 @@ class SelectCell(QWidget):
         checkbox_rect = QRect(x, y, rect_size, rect_size)
         if self.select_type == SelectType.SINGLE:
             if self._is_selected:
-                painter.setBrush(QColor(COLOR_BLUE))
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawEllipse(checkbox_rect)
+                painter.setBrush(QColor(COLOR_WHITE))
+                painter.setPen(QPen(QColor(tokens.PRIMARY), 5))
+                painter.drawEllipse(checkbox_rect.adjusted(2, 2, -2, -2))
             else:
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.setPen(QPen(QColor(COLOR_LIGHT_GRAY), 2))
-                painter.drawEllipse(checkbox_rect)
+                painter.setBrush(QColor(COLOR_WHITE))
+                painter.setPen(QPen(QColor(COLOR_LIGHT_GRAY), 1.5))
+                painter.drawEllipse(checkbox_rect.adjusted(1, 1, -1, -1))
         else:
             if self._is_selected:
-                painter.setBrush(QColor(COLOR_BLUE))
+                painter.setBrush(QColor(tokens.PRIMARY))
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(checkbox_rect, 4, 4)
                 pen = QPen(QColor(COLOR_WHITE), 2)
@@ -720,9 +729,9 @@ class SelectCell(QWidget):
                     checkbox_rect.top() + 5,
                 )
             else:
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.setPen(QPen(QColor(COLOR_LIGHT_GRAY), 2))
-                painter.drawRoundedRect(checkbox_rect, 4, 4)
+                painter.setBrush(QColor(COLOR_WHITE))
+                painter.setPen(QPen(QColor(COLOR_LIGHT_GRAY), 1.5))
+                painter.drawRoundedRect(checkbox_rect.adjusted(1, 1, -1, -1), 4, 4)
 
 
 class DataTableWidget(QWidget):
@@ -901,8 +910,10 @@ class DataTableWidget(QWidget):
 
     def _init_ui(self):
         """Initializes the main layout and sub-widgets."""
+        self.setObjectName("DataTable")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(1, 1, 1, 1)
         main_layout.setSpacing(0)
 
         # Header
@@ -917,7 +928,10 @@ class DataTableWidget(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(self._sync_header_margin)
         self.data_container = QWidget()
+        self.data_container.setObjectName("DataTableBody")
         self.data_grid_layout = QGridLayout(self.data_container)
         self.data_grid_layout.setContentsMargins(0, 0, 0, 0)
         self.data_grid_layout.setSpacing(0)
@@ -928,12 +942,19 @@ class DataTableWidget(QWidget):
         self.pagination_container = QWidget()
         self.pagination_container.setObjectName("pagination-container")
         self.pagination_layout = QHBoxLayout(self.pagination_container)
-        self.pagination_layout.setContentsMargins(20, 20, 20, 20)
+        self.pagination_layout.setContentsMargins(16, 10, 16, 10)
+        self.pagination_layout.setSpacing(8)
         self._setup_pagination_controls()
 
         main_layout.addWidget(self.header_widget)
         main_layout.addWidget(self.scroll_area)
         main_layout.addWidget(self.pagination_container)
+
+    def _sync_header_margin(self, _min=0, maximum=0):
+        """Indent the header by the scrollbar width while the scrollbar is visible."""
+        bar = self.scroll_area.verticalScrollBar()
+        width = bar.sizeHint().width() if maximum > 0 else 0
+        self.header_widget.grid_layout.setContentsMargins(0, 0, width, 0)
 
     # --- Table Rebuilding Logic ---
 
@@ -961,11 +982,15 @@ class DataTableWidget(QWidget):
             self._build_calculation_footer()
 
         self._update_grid_stretch()
-        # Add a final spacer to push all content up
+        # Add a final stretching spacer row so rows keep their height and stay at the top
+        if getattr(self, "_stretch_row", None) is not None:
+            self.data_grid_layout.setRowStretch(self._stretch_row, 0)
+        self._stretch_row = self.data_grid_layout.rowCount()
         spacer = QSpacerItem(
-            10, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            10, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
-        self.data_grid_layout.addItem(spacer)
+        self.data_grid_layout.addItem(spacer, self._stretch_row, 0, 1, self._grid_span())
+        self.data_grid_layout.setRowStretch(self._stretch_row, 1)
 
     def _clear_grid_layout(self):
         """Removes all widgets from the data grid layout."""
@@ -993,7 +1018,7 @@ class DataTableWidget(QWidget):
                 add_widget = AddRowWidget(row_context)
                 add_widget.add_row_requested.connect(self.add_row_requested)
                 self.data_grid_layout.addWidget(
-                    add_widget, grid_row_idx, 0, 1, len(self.column_configs)
+                    add_widget, grid_row_idx, 0, 1, self._grid_span()
                 )
                 grid_row_idx += 1
 
@@ -1026,8 +1051,16 @@ class DataTableWidget(QWidget):
             row_span = group_size if config.is_pivot and row_in_group_idx == 0 else 1
 
             self.data_grid_layout.addWidget(
-                container, grid_row_idx + row_in_group_idx, col_idx, row_span, 1
+                container, grid_row_idx + row_in_group_idx, col_idx * 2, row_span, 1
             )
+            # Fill the handle gap so the row background is continuous.
+            if col_idx < len(self.column_configs) - 1:
+                gap = QWidget()
+                gap.setObjectName(container.objectName())
+                gap.setFixedWidth(ResizeHandle.WIDTH)
+                self.data_grid_layout.addWidget(
+                    gap, grid_row_idx + row_in_group_idx, col_idx * 2 + 1, row_span, 1
+                )
 
         if abs_row_idx == self.auto_edit_row_index:
             self.auto_edit_row_index = -1
@@ -1042,11 +1075,11 @@ class DataTableWidget(QWidget):
         """Wraps a content widget in a styled container for the grid."""
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(5, 2, 5, 2)
+        layout.setContentsMargins(10, 4, 10, 4)
 
         # Special handling for list widgets to align top
         if isinstance(content_widget, MutableListWidget):
-            layout.addWidget(content_widget, 1, Qt.AlignmentFlag.AlignTop)
+            layout.addWidget(content_widget, 1, Qt.AlignmentFlag.AlignVCenter)
         else:
             layout.addWidget(content_widget)
 
@@ -1076,7 +1109,7 @@ class DataTableWidget(QWidget):
                 and config.calculation != NumberCalculation.NONE
             ):
                 calc_widget = CalculationWidget(config, self.model, i)
-                self.data_grid_layout.addWidget(calc_widget, footer_row, i)
+                self.data_grid_layout.addWidget(calc_widget, footer_row, i * 2)
 
     def _update_grid_stretch(self):
         """Applies the current column widths and minimums to the grid layout."""
@@ -1085,8 +1118,16 @@ class DataTableWidget(QWidget):
             zip(self.column_widths, self.column_configs)
         ):
             stretch = int(width_percentage * stretch_multiplier)
-            self.data_grid_layout.setColumnStretch(i, stretch)
-            self.data_grid_layout.setColumnMinimumWidth(i, config.min_width)
+            self.data_grid_layout.setColumnStretch(i * 2, stretch)
+            self.data_grid_layout.setColumnMinimumWidth(i * 2, config.min_width)
+            if i < len(self.column_configs) - 1:
+                self.data_grid_layout.setColumnMinimumWidth(i * 2 + 1, ResizeHandle.WIDTH)
+        # Same trailing stretch column as the header
+        self.data_grid_layout.setColumnStretch(len(self.column_configs) * 2, 1)
+
+    def _grid_span(self) -> int:
+        """Number of grid columns used by data cells plus handle gaps."""
+        return len(self.column_configs) * 2 - 1
 
     # --- Cell Widget Factory Methods ---
 
@@ -1109,6 +1150,7 @@ class DataTableWidget(QWidget):
         self, config: BaseColumnConfig, data: Any, row_idx: int, col_idx: int
     ) -> QWidget:
         cell = QLabel(str(data))
+        cell.setObjectName("CellText")
         cell.setAlignment(config.alignment)
         cell.setWordWrap(True)
         return cell
@@ -1161,15 +1203,6 @@ class DataTableWidget(QWidget):
             cell.value_changed.connect(
                 lambda value: self.cell_changed.emit(row_idx, col_idx, value)
             )
-        # Style based on value
-        try:
-            num_val = float(data) if data not in [None, "", "-"] else 0
-            if num_val < 0:
-                cell.label.setObjectName("NumberNegative")
-            elif num_val > 0:
-                cell.label.setObjectName("NumberPositive")
-        except (ValueError, TypeError):
-            pass
         return cell
 
     def _create_dropdown_cell(
@@ -1213,10 +1246,13 @@ class DataTableWidget(QWidget):
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
-        delete_btn = QPushButton("Delete")
-        delete_btn.setObjectName("RedButton")
-        delete_btn.clicked.connect(lambda: self.delete_requested.emit(row_idx))
+        delete_btn = ui_kit.icon_button(
+            "trash", "Delete", danger=True,
+            on_click=lambda: self.delete_requested.emit(row_idx),
+        )
+        layout.addStretch(1)
         layout.addWidget(delete_btn)
+        layout.addStretch(1)
         return container
 
     # --- Data Grouping ---
@@ -1322,28 +1358,38 @@ class DataTableWidget(QWidget):
 
         self.header_widget.set_column_stretch(left_col, left_stretch)
         self.header_widget.set_column_stretch(right_col, right_stretch)
-        self.data_grid_layout.setColumnStretch(left_col, left_stretch)
-        self.data_grid_layout.setColumnStretch(right_col, right_stretch)
+        self.data_grid_layout.setColumnStretch(left_col * 2, left_stretch)
+        self.data_grid_layout.setColumnStretch(right_col * 2, right_stretch)
 
     # --- Pagination ---
 
     def _setup_pagination_controls(self):
         if self.show_add_button:
-            self.add_button = QPushButton("Add")
-            self.add_button.setObjectName("GreenButton")
+            self.add_button = ui_kit.button("Add", "primary", "plus", small=True)
             self.add_button.clicked.connect(self.add_new_row_clicked)
             self.pagination_layout.addWidget(self.add_button)
-        
+
         if self.custom_buttons:
             for button in self.custom_buttons:
                 self.pagination_layout.addWidget(button)
 
-        self.prev_button = QPushButton("← Previous")
+        self.pagination_info = QLabel()
+        self.pagination_info.setObjectName("PaginationInfo")
+        if not self.show_add_button and not self.custom_buttons:
+            self.pagination_layout.addWidget(self.pagination_info)
+
+        self.prev_button = QPushButton()
         self.prev_button.setObjectName("PageNavButton")
+        self.prev_button.setToolTip("Previous page")
+        self.prev_button.setIcon(icons.icon("chevron-left", tokens.TEXT_MUTED, 16, 2))
+        self.prev_button.setFixedSize(32, 32)
         self.prev_button.clicked.connect(self._prev_page)
 
-        self.next_button = QPushButton("Next →")
+        self.next_button = QPushButton()
         self.next_button.setObjectName("PageNavButton")
+        self.next_button.setToolTip("Next page")
+        self.next_button.setIcon(icons.icon("chevron-right", tokens.TEXT_MUTED, 16, 2))
+        self.next_button.setFixedSize(32, 32)
         self.next_button.clicked.connect(self._next_page)
 
         self.page_buttons_widget = QWidget()
@@ -1378,6 +1424,14 @@ class DataTableWidget(QWidget):
 
         self.prev_button.setEnabled(self.current_page > 1)
         self.next_button.setEnabled(self.current_page < self.total_pages)
+
+        total = self.model.get_row_count()
+        if total:
+            first = (self.current_page - 1) * self.items_per_page + 1
+            last = min(self.current_page * self.items_per_page, total)
+            self.pagination_info.setText(f"Showing {first}–{last} of {total}")
+        else:
+            self.pagination_info.setText("No data yet")
 
     def _generate_page_list(self):
         t, c = self.total_pages, self.current_page

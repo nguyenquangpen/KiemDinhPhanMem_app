@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QEvent, Signal
 from typing import List, Tuple, Any
 
 from models.data_classes import Viewpoint, ViewpointDescription, ViewpointType, Project
+from views.components import ui_kit
 from models.database import DataManager
 from views.components.table import (
     ActionColumnConfig,
@@ -73,19 +74,19 @@ class ComponentViewpointWidget(QWidget):
                 default_width=0.20,
                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             ),
-            ActionColumnConfig(header="Actions"),
+            ActionColumnConfig(header="", min_width=90),
         ]
         column_configs[-1].widget_factory = self._create_custom_action_buttons
 
-        add_from_template_button = QPushButton("Add from templates")
-        add_from_template_button.setObjectName("GreenButton")
+        add_from_template_button = ui_kit.button("Add from templates", "secondary", "layers", small=True)
         add_from_template_button.clicked.connect(self._on_add_from_template)
         self.model = TableModel(data=[])
 
         self.table_widget = DataTableWidget(
             column_configs=column_configs,
             model=self.model,
-            item_height=40,
+            item_height=48,
+            header_height=44,
             show_add_button=True,
             show_animated_add_row=True,
             custom_buttons=[add_from_template_button],
@@ -98,9 +99,18 @@ class ComponentViewpointWidget(QWidget):
             self._handle_add_new_viewpoint_group
         )
 
+        self.setObjectName("PageWidget")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.table_widget)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(20)
+        layout.addWidget(
+            ui_kit.page_header(
+                "Component viewpoints",
+                "Reusable validation rules (email format, length...) that task fields can use. Hover between groups to add a row; double-click a cell to edit.",
+            )
+        )
+        layout.addWidget(self.table_widget, 1)
         self.setLayout(layout)
     
     def _create_custom_action_buttons(self, data: Any, row_idx: int) -> QWidget:
@@ -108,14 +118,13 @@ class ComponentViewpointWidget(QWidget):
         container = QWidget()
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setSpacing(6)
+        layout.addStretch(1)
 
-        save_btn = QPushButton("Save")
-        save_btn.setObjectName("GreenButton") 
+        save_btn = ui_kit.icon_button("save", "Save row to templates")
         save_btn.clicked.connect(lambda: self._on_save_row_to_template(row_idx))
-        
-        delete_btn = QPushButton("Delete")
-        delete_btn.setObjectName("RedButton")
+
+        delete_btn = ui_kit.icon_button("trash", "Delete row", danger=True)
         delete_btn.clicked.connect(lambda: self._on_delete_row(row_idx))
 
         layout.addWidget(save_btn)

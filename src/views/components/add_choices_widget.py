@@ -31,34 +31,27 @@ class PillWidget(QWidget):
         self._init_ui()
 
     def _init_ui(self):
+        # Styled by asset/input_card.qss (#Pill, #PillLabel, #PillRemove)
+        self.setObjectName("Pill")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QHBoxLayout()
-        layout.setContentsMargins(6, 3, 6, 3)
-        layout.setSpacing(5)
+        layout.setContentsMargins(10, 2, 4 if self.removable else 10, 2)
+        layout.setSpacing(4)
 
         self.label = QLabel(self.text)
-        self.label.setFont(QFont(self.font().family(), 9))
+        self.label.setObjectName("PillLabel")
         layout.addWidget(self.label)
 
         if self.removable:
             self.remove_btn = QPushButton("×")
+            self.remove_btn.setObjectName("PillRemove")
+            self.remove_btn.setToolTip(f"Remove {self.text}")
             self.remove_btn.setFixedSize(16, 16)
             self.remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.remove_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #E0E0E0; color: #555555;
-                    border: none; border-radius: 8px; font-weight: bold;
-                }
-                QPushButton:hover { background-color: #F48080; color: white; }
-            """
-            )
             self.remove_btn.clicked.connect(lambda: self.remove_clicked.emit(self.text))
             layout.addWidget(self.remove_btn)
 
         self.setLayout(layout)
-        self.setAutoFillBackground(True)
-        self.setPalette(QPalette(QColor("#E9E9E9")))
-        self.setStyleSheet("border-radius: 10px;")
 
 
 class AddButton(QPushButton):
@@ -66,19 +59,10 @@ class AddButton(QPushButton):
 
     def __init__(self, parent=None):
         super().__init__("+", parent)
+        self.setObjectName("PillAdd")
+        self.setToolTip("Add validation type")
         self.setFixedSize(22, 22)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: #56BB55; color: white;
-                border: none; border-radius: 11px;
-                font-size: 16px; font-weight: bold;
-                padding-bottom: 2px;
-            }}
-            QPushButton:hover {{ background-color: #4CAF50; }}
-        """
-        )
 
 
 class AddItemDialog(QDialog):
@@ -87,12 +71,18 @@ class AddItemDialog(QDialog):
     def __init__(self, existing_items: List[str], items: List[str], parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Validation Types")
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(380)
 
         self.existing_items = set(existing_items)
         self.full_item_list = []
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+        hint = QLabel("Pick one or more component viewpoints to validate this field.")
+        hint.setObjectName("MutedText")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search for items to add...")
@@ -108,6 +98,8 @@ class AddItemDialog(QDialog):
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
+        button_box.button(QDialogButtonBox.StandardButton.Ok).setText("Add selected")
+        button_box.button(QDialogButtonBox.StandardButton.Ok).setObjectName("PrimaryButton")
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -178,7 +170,7 @@ class MutableListWidget(QWidget):
 
         self.flow_widget = QWidget()
         self.flow_layout = FlowLayout()
-        self.flow_layout.setSpacing(4)
+        self.flow_layout.setSpacing(6)
         self.flow_widget.setLayout(self.flow_layout)
 
         main_layout.addWidget(self.flow_widget)

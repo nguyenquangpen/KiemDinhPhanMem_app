@@ -1,51 +1,300 @@
+/* ==========================================================================
+   Global — window, page, typography roles, scrollbars, misc Qt widgets.
+   Tokens: see src/asset/tokens.py
+   ========================================================================== */
+
 QMainWindow, QDialog {
-    background-color: #ECF0F0;
-    border-radius: 15px;
+    background-color: #F5F6F6;
 }
 
-QWidget#PageWidget {
-    background-color: #ECF0F0;
+QWidget {
+    color: #1E2B29;
 }
 
+QWidget#PageWidget,
+QWidget#PageContent {
+    background-color: #F5F6F6;
+}
+
+QMessageBox {
+    background-color: #FFFFFF;
+}
+QMessageBox QLabel {
+    font-size: 13px;
+}
+
+QToolTip {
+    background-color: #1E2B29;
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+/* --- Typography roles (QLabel objectName) --- */
+QLabel#PageTitle,
 QLabel#TitleLabel {
-    font-size: 24pt;
-    font-weight: bold;
-    color: #203532;
+    font-size: 24px;
+    font-weight: 600;
+    color: #1E2B29;
 }
 
+QLabel#PageSubtitle {
+    font-family: "Noto Serif";
+    font-size: 13px;
+    color: #5B6866;
+}
+
+QLabel#CardTitle,
 QLabel#TasksTitleLabel {
-    font-size: 16px;
-    font-weight: bold;
-    color: #203532;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1E2B29;
 }
 
-QDialog#FullscreenViewer {
-    background-color: #000000;
+QLabel#CardEyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1E2B29;
 }
 
+QLabel#SectionLabel {
+    font-size: 11px;
+    font-weight: 500;
+    color: #5B6866;
+    letter-spacing: 1px;
+}
+
+QLabel#HeroNumber {
+    font-size: 38px;
+    font-weight: 500;
+    color: #1E2B29;
+}
+
+QLabel#BigName {
+    font-size: 24px;
+    font-weight: 500;
+    color: #1E2B29;
+}
+
+QLabel#BigName[tone="ng"] {
+    color: #9E2F27;
+}
+QLabel#BigName[tone="ok"] {
+    color: #226B41;
+}
+
+QLabel#BodyText {
+    font-family: "Noto Serif";
+    font-size: 13px;
+    color: #1E2B29;
+}
+
+QLabel#MutedText {
+    font-family: "Noto Serif";
+    font-size: 12px;
+    color: #5B6866;
+}
+
+QLabel#WarningText {
+    font-family: "Noto Serif";
+    font-size: 12px;
+    color: #8A5300;
+}
+
+QLabel#StatValue {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1E2B29;
+}
+
+QLabel#FieldLabel,
+QLabel#form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1E2B29;
+}
+
+QLabel#ValueBox {
+    background-color: #FFFFFF;
+    border: 1px solid #D3D7D6;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+/* --- Badges --- */
+QLabel#Badge {
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    background-color: #EEF0F0;
+    color: #4A5654;
+}
+QLabel#Badge[tone="ok"]   { background-color: #EAF5EE; color: #226B41; }
+QLabel#Badge[tone="ng"]   { background-color: #FCEDEC; color: #9E2F27; }
+QLabel#Badge[tone="run"]  { background-color: #FFF6E5; color: #8A5300; }
+QLabel#Badge[tone="info"] { background-color: #F1F7FD; color: #1F4F86; }
+
+/* --- Dividers --- */
+QFrame#Divider {
+    background-color: #E3E5E5;
+    border: none;
+}
+QFrame#DottedDivider {
+    background: transparent;
+    border: none;
+    border-top: 2px dotted #D3D7D6;
+}
+
+/* --- Header bar & breadcrumb --- */
+QWidget#TopBar {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #E3E5E5;
+}
+QLabel#Breadcrumb {
+    font-size: 13px;
+    color: #5B6866;
+}
+
+/* --- Progress bars --- */
+QProgressBar {
+    background-color: #EEF0F0;
+    border: none;
+    border-radius: 3px;
+    text-align: center;
+    color: #1E2B29;
+    min-height: 8px;
+}
+QProgressBar::chunk {
+    background-color: #2F8A55;
+    border-radius: 3px;
+}
+QProgressBar#MiniProgress {
+    min-height: 6px;
+    max-height: 6px;
+}
+QProgressBar#MiniProgress[tone="ng"]::chunk {
+    background-color: #C2453B;
+}
+
+/* --- Group boxes --- */
+QGroupBox {
+    background-color: #FFFFFF;
+    border: 1px solid #E3E5E5;
+    border-radius: 8px;
+    margin-top: 18px;
+    padding: 16px 12px 12px 12px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 4px;
+    color: #1E2B29;
+}
+
+/* --- Scroll areas & scrollbars --- */
 QScrollArea {
     background-color: transparent;
     border: none;
 }
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
 
 QScrollBar:vertical {
     border: none;
-    background: #ECF0F0; 
-    width: 8px;
-    margin: 0px 0px 0px 0px;
+    background: transparent;
+    width: 10px;
+    margin: 2px;
 }
-
 QScrollBar::handle:vertical {
-    background: #D9D9D9;
-    min-height: 20px;
-    border-radius: 4px;
+    background: #D3D7D6;
+    min-height: 24px;
+    border-radius: 3px;
 }
-
-QScrollBar::add-line:vertical, 
-QScrollBar::sub-line:vertical {
+QScrollBar::handle:vertical:hover {
+    background: #B7BFBD;
+}
+QScrollBar:horizontal {
+    border: none;
+    background: transparent;
+    height: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:horizontal {
+    background: #D3D7D6;
+    min-width: 24px;
+    border-radius: 3px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #B7BFBD;
+}
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0px;
     height: 0px;
 }
-
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+QScrollBar::add-page, QScrollBar::sub-page {
     background: none;
+}
+
+/* --- Item views (QTableView / QTableWidget / QListWidget) --- */
+QTableView, QTableWidget, QListWidget, QTreeView {
+    background-color: #FFFFFF;
+    alternate-background-color: #FAFAFA;
+    border: 1px solid #E3E5E5;
+    border-radius: 8px;
+    gridline-color: #ECEEEE;
+    selection-background-color: #F1F8F4;
+    selection-color: #1E2B29;
+    font-family: "Noto Serif";
+    font-size: 13px;
+}
+QHeaderView {
+    background-color: #FFFFFF;
+    border: none;
+}
+QHeaderView::section {
+    background-color: #FFFFFF;
+    color: #1E2B29;
+    font-family: "Poppins";
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-bottom: 1px solid #E3E5E5;
+    padding: 10px 8px;
+}
+QTableCornerButton::section {
+    background-color: #FFFFFF;
+    border: none;
+}
+
+/* --- Fullscreen screenshot viewer --- */
+QDialog#FullscreenViewer {
+    background-color: #111716;
+}
+
+/* --- Tabs --- */
+QTabWidget::pane {
+    border: 1px solid #E3E5E5;
+    border-radius: 8px;
+    background: #FFFFFF;
+    top: -1px;
+}
+QTabBar::tab {
+    background: transparent;
+    color: #5B6866;
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+}
+QTabBar::tab:selected {
+    color: #1E2B29;
+    border-bottom: 2px solid #2F8A55;
 }

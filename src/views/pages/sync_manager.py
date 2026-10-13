@@ -14,8 +14,11 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from PySide6.QtCore import QThread, QTimer, Qt, Signal
+from PySide6.QtGui import QFont
+from asset import tokens
 from models.database import DataManager
 from services.logging_config import get_logger
+from views.components import ui_kit
 
 logger = get_logger("sync_manager")
 
@@ -69,23 +72,26 @@ class SyncUI(QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(14)
+        layout.addWidget(ui_kit.label("Local-first sync", "CardTitle"))
+        layout.addWidget(
+            ui_kit.label("Your work is saved on this machine first and synced to the server in the background.", "MutedText", wrap=True)
+        )
 
         # ---- 1. Global sync toggle & Top Status ----
         top_layout = QHBoxLayout()
-        self.sync_toggle = QCheckBox("Enable Sync")
+        self.sync_toggle = QCheckBox("Enable sync")
         self.sync_toggle.toggled.connect(self._on_toggle_sync)
         top_layout.addWidget(self.sync_toggle)
 
-        self.top_status_label = QLabel("Status: Unknown")
-        self.top_status_label.setStyleSheet(
-            "color: gray; font-style: italic; margin-left: 10px;"
-        )
+        self.top_status_label = ui_kit.badge("Status: Unknown", "none")
         top_layout.addWidget(self.top_status_label)
         top_layout.addStretch()
         layout.addLayout(top_layout)
 
         # ---- Sync settings ----
-        self.sync_group = QGroupBox("Synchronization Settings")
+        self.sync_group = QGroupBox("Synchronization settings")
         sync_layout = QVBoxLayout(self.sync_group)
 
         # A. Auto sync
@@ -110,28 +116,28 @@ class SyncUI(QDialog):
         sync_layout.addLayout(time_layout)
 
         button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save")
+        self.pull_button = ui_kit.button("Force pull from cloud", "neutral", "download")
+        self.pull_button.clicked.connect(self._on_force_pull)
+        self.save_button = ui_kit.button("Save", "primary", "save")
         self.save_button.setEnabled(False)
         self.save_button.clicked.connect(self._on_save_now)
-
-        self.pull_button = QPushButton("Force Pull from Cloud")
-        self.pull_button.clicked.connect(self._on_force_pull)
-        button_layout.addWidget(self.save_button)
+        button_layout.addStretch(1)
         button_layout.addWidget(self.pull_button)
+        button_layout.addWidget(self.save_button)
         sync_layout.addLayout(button_layout)
 
         layout.addWidget(self.sync_group)
 
-        self.status_label = QLabel("Idle")
+        self.status_label = ui_kit.label("Idle", "MutedText")
         layout.addWidget(self.status_label)
 
         # ---- Status Log ----
-        log_group = QGroupBox("Activity Logs")
+        log_group = QGroupBox("Activity log")
         log_layout = QVBoxLayout(log_group)
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setMinimumHeight(150)
-        self.log_view.setStyleSheet("background-color: #f4f4f4; font-family: 'Consolas'; font-size: 10pt;")
+        self.log_view.setFont(QFont(tokens.FONT_MONO, 9))
         log_layout.addWidget(self.log_view)
         layout.addWidget(log_group)
     
@@ -163,11 +169,11 @@ class SyncUI(QDialog):
     def _add_log(self, message, level="INFO"):
         """Hàm ghi log có màu sắc và thời gian"""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        color = "black"
-        if level == "SUCCESS": color = "green"
-        elif level == "ERROR": color = "red"
-        elif level == "PROCESS": color = "blue"
-        log_entry = f"<span style='color: gray;'>[{timestamp}]</span> <b style='color: {color};'>[{level}]</b> {message}"
+        color = tokens.TEXT
+        if level == "SUCCESS": color = tokens.PRIMARY_TEXT
+        elif level == "ERROR": color = tokens.DANGER_TEXT
+        elif level == "PROCESS": color = tokens.SECONDARY_TEXT
+        log_entry = f"<span style='color: {tokens.TEXT_MUTED};'>[{timestamp}]</span> <b style='color: {color};'>[{level}]</b> {message}"
         self.log_view.append(log_entry)
         self.log_view.verticalScrollBar().setValue(self.log_view.verticalScrollBar().maximum())
 
@@ -240,22 +246,19 @@ class SyncUI(QDialog):
         result_text = "success" if success else "failed"
         self.status_label.setText(f"Sync activate {result_text}")
         if success:
-            self.top_status_label.setText("Status: Synced")
-            self.top_status_label.setStyleSheet("color: green; margin-left: 10px;")
+            ui_kit.set_badge(self.top_status_label, "Status: Synced", "ok")
         else:
-            self.top_status_label.setText("Status: Pending/Error")
-            self.top_status_label.setStyleSheet("color: red; margin-left: 10px;")
+            ui_kit.set_badge(self.top_status_label, "Status: Pending/Error", "ng")
 
     def _on_db_change_detected(self):
         """calling when DB generate signal sync"""
-        self.top_status_label.setText("Status: Change detected, waiting 5s...")
-        self.top_status_label.setStyleSheet("color: orange; margin-left: 10px;")
+        ui_kit.set_badge(self.top_status_label, "Status: Change detected, waiting 5s...", "run")
         self.debounce_timer.start()
 
     def _execute_sync_worker(self):
         self._add_log("Starting synchronization...", "PROCESS")
         self.status_label.setText("Syncing...")
-        self.top_status_label.setText("Status: Syncing...")
+        ui_kit.set_badge(self.top_status_label, "Status: Syncing...", "info")
         self.worker = SyncWorker(self.db)
         self.worker.finished.connect(self._on_worker_finished)
         self.worker.start()
@@ -301,7 +304,7 @@ class SyncUI(QDialog):
     def _on_sync_finished(self, success, mode="push"):
         if success:
             self._add_log(f"{mode} operation completed successfully.", "SUCCESS")
-            self.top_status_label.setText(f"Status: {mode} Done")
+            ui_kit.set_badge(self.top_status_label, f"Status: {mode} Done", "ok")
         else:
             self._add_log(f"{mode} operation failed. Please check your connection.", "ERROR")
-            self.top_status_label.setText(f"Status: {mode} Error")
+            ui_kit.set_badge(self.top_status_label, f"Status: {mode} Error", "ng")

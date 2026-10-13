@@ -1,66 +1,153 @@
-QLineEdit, 
-QComboBox {
-    background-color: #FFFFFF; 
-    padding: 5px 8px;
-    border: 1px solid #D9D9D9; 
-    border-radius: 5px;
+/* ==========================================================================
+   Form controls
+   @ASSET@ is replaced with the absolute path of src/asset by StyleManager.
+   ========================================================================== */
+
+QLineEdit,
+QSpinBox,
+QDoubleSpinBox,
+QDateTimeEdit {
+    background-color: #FFFFFF;
+    color: #1E2B29;
+    border: 1px solid #D3D7D6;
+    border-radius: 6px;
+    padding: 6px 10px;
     min-height: 24px;
-    color: #203532; 
-}
-
-QLineEdit:focus, 
-QComboBox:focus {
-    border: 1px solid #4A90E2;
-}
-
-QLabel#form-label {
-    font-weight: 500;
+    font-family: "Noto Serif";
     font-size: 13px;
-    margin-bottom: 2px;
+    selection-background-color: #CFE2F6;
+    selection-color: #1E2B29;
+    lineedit-password-character: 8226;
 }
 
-QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 3px;
-}
-QCheckBox::indicator:unchecked {
-    border: 2px solid #CCCCCC;
-    background-color: #FFFFFF; 
-}
-QCheckBox::indicator:checked {
-    border: 2px solid #4A90E2;
-    background-color: #4A90E2; 
+QTextEdit,
+QPlainTextEdit {
+    background-color: #FFFFFF;
+    color: #1E2B29;
+    border: 1px solid #D3D7D6;
+    border-radius: 6px;
+    padding: 6px;
+    selection-background-color: #CFE2F6;
+    selection-color: #1E2B29;
 }
 
-QLabel#ErrorLabel {
-    color: #F48080;
-    font-weight: bold;
-    font-size: 14pt;
-    border: 1px solid #F48080;
+QLineEdit:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QComboBox:focus {
+    border: 1px solid #2E6DB4;
 }
 
-QLineEdit#EditingCellLineEdit {
-    background-color: #FFFFFF; 
-    border: 1px solid #4A90E2;
-    padding: 3px;
-    border-radius: 5px;
+QLineEdit:disabled,
+QLineEdit:read-only,
+QTextEdit:read-only {
+    background-color: #FAFAFA;
+    color: #5B6866;
 }
 
 QLineEdit#SearchLineEdit {
-    background-color: #FFFFFF; 
-    border-radius: 15px;           
-    min-height: 30px;        
+    background-color: #FAFAFA;
+    border: 1px solid #E3E5E5;
+    border-radius: 6px;
+    padding-left: 8px;
+    min-height: 26px;
+}
+QLineEdit#SearchLineEdit:focus {
+    background-color: #FFFFFF;
+    border: 1px solid #2E6DB4;
 }
 
-QPushButton#NewProjectButton {
-    background-color: #56BB55; 
-    color: #FFFFFF;            
+QLineEdit#EditingCellLineEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #2E6DB4;
+    padding: 3px 6px;
+    border-radius: 4px;
+    min-height: 18px;
+}
+
+/* --- Combo boxes --- */
+QComboBox {
+    background-color: #FFFFFF;
+    color: #1E2B29;
+    border: 1px solid #D3D7D6;
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-height: 24px;
+    font-family: "Noto Serif";
+    font-size: 13px;
+}
+QComboBox::drop-down {
     border: none;
-    border-radius: 8px;      
-    font-weight: bold;        
+    width: 28px;
+}
+QComboBox::down-arrow {
+    image: url(@ASSET@/icons/chevron-down.svg);
+    width: 14px;
+    height: 14px;
+}
+QComboBox::down-arrow:on {
+    image: url(@ASSET@/icons/chevron-up.svg);
+}
+QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    border: 1px solid #E3E5E5;
+    outline: 0px;
+    padding: 4px;
+    selection-background-color: #EAF5EE;
+    selection-color: #226B41;
 }
 
-QPushButton#NewProjectButton:hover {
-    background-color: #4CAA4C;
+/* --- Checkboxes & radios --- */
+QCheckBox,
+QRadioButton {
+    spacing: 8px;
+    font-size: 13px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+QCheckBox::indicator:unchecked {
+    border: 1px solid #B7BFBD;
+    background-color: #FFFFFF;
+}
+QCheckBox::indicator:unchecked:hover {
+    border: 1px solid #2F8A55;
+}
+QCheckBox::indicator:checked {
+    border: 1px solid #2F8A55;
+    background-color: #2F8A55;
+    image: url(@ASSET@/icons/check-white.svg);
+}
+QCheckBox::indicator:disabled {
+    background-color: #EEF0F0;
+    border: 1px solid #E3E5E5;
+}
+
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+}
+QRadioButton::indicator:unchecked {
+    border: 1px solid #B7BFBD;
+    background-color: #FFFFFF;
+}
+QRadioButton::indicator:checked {
+    border: 5px solid #2F8A55;
+    background-color: #FFFFFF;
+}
+
+/* --- Messages --- */
+QLabel#ErrorLabel {
+    color: #9E2F27;
+    background-color: #FCEDEC;
+    border: 1px solid #E3C4C1;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-weight: 500;
+    font-size: 13px;
 }

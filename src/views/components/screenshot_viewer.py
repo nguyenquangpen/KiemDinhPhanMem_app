@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 
 from services.logging_config import get_logger
 
+from views.components import ui_kit
+
 logger = get_logger("screenshot_viewer")
 
 
@@ -69,30 +71,13 @@ class ScreenshotViewerDialog(QDialog):
         header_layout = QHBoxLayout()
 
         self.title_label = QLabel(f"Screenshots: {len(self.screenshots)} images")
-        self.title_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 18pt;
-                font-weight: bold;
-                color: #203532;
-                padding: 10px;
-            }
-        """
-        )
+        self.title_label.setObjectName("PageTitle")
         header_layout.addWidget(self.title_label)
 
         header_layout.addStretch()
 
         self.image_count_label = QLabel("0 images")
-        self.image_count_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 14pt;
-                color: #666666;
-                padding: 5px;
-            }
-        """
-        )
+        self.image_count_label.setObjectName("MutedText")
         header_layout.addWidget(self.image_count_label)
 
         main_layout.addLayout(header_layout)
@@ -109,20 +94,9 @@ class ScreenshotViewerDialog(QDialog):
             label = QLabel("No Image")
             label.setMinimumSize(400, 300)
             label.setMaximumSize(450, 350)
-            label.setStyleSheet(
-                """
-                QLabel {
-                    background-color: #FFFFFF;
-                    border: 2px solid #CCCCCC;
-                    border-radius: 8px;
-                    color: #666666;
-                    font-size: 12pt;
-                }
-                QLabel:hover {
-                    border: 2px solid #4A90E2;
-                }
-            """
-            )
+            label.setObjectName("ScreenshotPreviewLabel")
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            label.setToolTip("Click to view full size")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setScaledContents(False)
             self.screenshot_labels.append(label)
@@ -135,73 +109,14 @@ class ScreenshotViewerDialog(QDialog):
         # Navigation and controls
         nav_layout = QHBoxLayout()
 
-        self.prev_button = QPushButton("← Previous")
-        self.prev_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #28A745;
-                color: white;
-                font-size: 14pt;
-                font-weight: bold;
-                border-radius: 6px;
-                padding: 10px 20px;
-                border: none;
-                min-width: 100px;
-            }
-            QPushButton:hover {
-                background-color: #218838;
-            }
-            QPushButton:pressed {
-                background-color: #1E7E34;
-            }
-            QPushButton:disabled {
-                background-color: #CCCCCC;
-                color: #666666;
-            }
-        """
-        )
-
-        self.next_button = QPushButton("Next →")
-        self.next_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #28A745;
-                color: white;
-                font-size: 14pt;
-                font-weight: bold;
-                border-radius: 6px;
-                padding: 10px 20px;
-                border: none;
-                min-width: 100px;
-            }
-            QPushButton:hover {
-                background-color: #218838;
-            }
-            QPushButton:pressed {
-                background-color: #1E7E34;
-            }
-            QPushButton:disabled {
-                background-color: #CCCCCC;
-                color: #666666;
-            }
-        """
-        )
+        self.prev_button = ui_kit.button("Previous", "neutral", "chevron-left")
+        self.next_button = ui_kit.button("Next", "neutral", "chevron-right", icon_right=True)
 
         nav_layout.addWidget(self.prev_button)
         nav_layout.addStretch()
         nav_layout.addWidget(self.next_button)
 
         main_layout.addLayout(nav_layout)
-
-        # Set main dialog styling
-        self.setStyleSheet(
-            """
-            QDialog {
-                background-color: #ECF0F0;
-                font-family: Arial, sans-serif;
-            }
-        """
-        )
 
     def setup_connections(self):
         """Setup signal connections"""
@@ -292,6 +207,11 @@ class ScreenshotViewerDialog(QDialog):
                 label.setText("Error loading screenshots")
                 label.show()
 
+    @staticmethod
+    def _set_error_state(label: QLabel, error: bool):
+        label.setProperty("error", "true" if error else "false")
+        ui_kit.repolish(label)
+
     def _load_screenshot_into_label(
         self, label: QLabel, screenshot_path: str, index: int
     ):
@@ -302,10 +222,7 @@ class ScreenshotViewerDialog(QDialog):
                 label.setText(
                     f"Screenshot {index + 1}\nFile not found:\n{os.path.basename(screenshot_path)}"
                 )
-                label.setStyleSheet(
-                    label.styleSheet()
-                    + "\nQLabel { color: red; background-color: #FFE6E6; }"
-                )
+                self._set_error_state(label, True)
                 return
 
             pixmap = QPixmap(screenshot_path)
@@ -319,36 +236,17 @@ class ScreenshotViewerDialog(QDialog):
                 label.setPixmap(scaled_pixmap)
                 label.setText("")  # Clear any text
                 # Reset styling to remove error states
-                label.setStyleSheet(
-                    """
-                    QLabel {
-                        background-color: #FFFFFF;
-                        border: 2px solid #CCCCCC;
-                        border-radius: 8px;
-                        color: #666666;
-                        font-size: 12pt;
-                    }
-                    QLabel:hover {
-                        border: 2px solid #4A90E2;
-                    }
-                """
-                )
+                self._set_error_state(label, False)
             else:
                 label.clear()
                 label.setText(f"Screenshot {index + 1}\nInvalid image format")
-                label.setStyleSheet(
-                    label.styleSheet()
-                    + "\nQLabel { color: red; background-color: #FFE6E6; }"
-                )
+                self._set_error_state(label, True)
 
         except Exception as e:
             logger.error(f"Error loading screenshot {screenshot_path}: {e}")
             label.clear()
             label.setText(f"Screenshot {index + 1}\nError loading image")
-            label.setStyleSheet(
-                label.styleSheet()
-                + "\nQLabel { color: red; background-color: #FFE6E6; }"
-            )
+            self._set_error_state(label, True)
 
     def show_fullscreen(self, index: int):
         """Show fullscreen view of a screenshot"""
@@ -369,6 +267,7 @@ class ScreenshotViewerDialog(QDialog):
 
             # Create fullscreen dialog
             fullscreen_dialog = QDialog(self)
+            fullscreen_dialog.setObjectName("FullscreenViewer")
             fullscreen_dialog.setWindowTitle(
                 f"Fullscreen: {os.path.basename(screenshot_path)}"
             )
@@ -393,29 +292,13 @@ class ScreenshotViewerDialog(QDialog):
                 image_label.setPixmap(scaled_pixmap)
             else:
                 image_label.setText("Unable to load image")
-                image_label.setStyleSheet("color: red; font-size: 18pt;")
+                image_label.setObjectName("ErrorLabel")
 
             image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(image_label)
 
             # Close button
-            close_btn = QPushButton("✖ Close (ESC)")
-            close_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #DC3545;
-                    color: white;
-                    font-size: 14pt;
-                    font-weight: bold;
-                    border-radius: 6px;
-                    padding: 10px 20px;
-                    border: none;
-                }
-                QPushButton:hover {
-                    background-color: #C82333;
-                }
-            """
-            )
+            close_btn = ui_kit.button("Close (Esc)", "neutral", "x")
             close_btn.clicked.connect(fullscreen_dialog.close)
 
             # ESC key handler
