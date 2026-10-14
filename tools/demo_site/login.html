@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo - Đăng nhập</title>
+  <style>
+    body { font-family: sans-serif; max-width: 420px; margin: 60px auto; }
+    label { display: block; margin-top: 12px; }
+    input { width: 100%; padding: 6px; box-sizing: border-box; }
+    .error { color: #c62828; font-size: 13px; min-height: 16px; }
+    .toast { margin-top: 16px; padding: 10px; display: none; }
+    .toast.ok { background: #2e7d32; color: #fff; }
+    .toast.fail { background: #fdecea; color: #c62828; }
+    button { margin-top: 16px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <!-- Trang mẫu. Tài khoản đúng: tester01 / Test@1234.
+       Lỗi cài sẵn để demo NG: spec yêu cầu tự cắt khoảng trắng đầu/cuối Username nhưng trang KHÔNG cắt. -->
+  <h2>Đăng nhập</h2>
+  <form id="form" novalidate>
+    <label for="username">Username</label>
+    <input id="username" name="username" placeholder="Tên đăng nhập">
+    <div class="error" id="username-error"></div>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" placeholder="Mật khẩu">
+    <div class="error" id="password-error"></div>
+
+    <button type="submit">Đăng nhập</button>
+  </form>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      const toast = document.getElementById('toast');
+      document.getElementById('username-error').textContent = u ? '' : 'Username là bắt buộc';
+      document.getElementById('password-error').textContent = p ? '' : 'Password là bắt buộc';
+      toast.style.display = 'none';
+      if (!u || !p) return;
+      toast.style.display = 'block';
+      if (u === 'tester01' && p === 'Test@1234') {
+        toast.className = 'toast ok'; toast.textContent = 'Đăng nhập thành công!';
+      } else {
+        toast.className = 'toast fail'; toast.setAttribute('role', 'alert');
+        toast.textContent = 'Sai tên đăng nhập hoặc mật khẩu';
+      }
+    });
+  </script>
+</body>
+</html>

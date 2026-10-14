@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo - Thanh toán</title>
+  <style>
+    body { font-family: sans-serif; max-width: 460px; margin: 60px auto; }
+    label { display: block; margin-top: 12px; }
+    input { width: 100%; padding: 6px; box-sizing: border-box; }
+    .error { color: #c62828; font-size: 13px; min-height: 16px; }
+    .toast { margin-top: 16px; padding: 10px; background: #2e7d32; color: #fff; display: none; }
+    button { margin-top: 16px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <!-- Trang mẫu (cổng thanh toán).
+       Lỗi cài sẵn để demo NG: spec yêu cầu CVV đúng 3 chữ số nhưng trang chấp nhận cả 4 chữ số. -->
+  <h2>Thông tin thẻ thanh toán</h2>
+  <form id="form" novalidate>
+    <label for="card_number">Số thẻ</label>
+    <input id="card_number" name="card_number" placeholder="16 chữ số">
+    <div class="error" id="card_number-error"></div>
+
+    <label for="card_holder">Tên chủ thẻ</label>
+    <input id="card_holder" name="card_holder" placeholder="NGUYEN VAN A">
+    <div class="error" id="card_holder-error"></div>
+
+    <label for="expiry">Ngày hết hạn</label>
+    <input id="expiry" name="expiry" placeholder="MM/YY">
+    <div class="error" id="expiry-error"></div>
+
+    <label for="cvv">CVV</label>
+    <input id="cvv" name="cvv" placeholder="3 chữ số">
+    <div class="error" id="cvv-error"></div>
+
+    <button type="submit">Thanh toán</button>
+  </form>
+  <div class="toast" id="toast" role="status">Thanh toán thành công!</div>
+
+  <script>
+    const NOW = { month: 10, year: 26 };  // cố định 10/2026 để kết quả không đổi theo ngày chạy
+    const expiryError = (v) => {
+      if (!v) return 'Ngày hết hạn là bắt buộc';
+      const m = /^(\d{2})\/(\d{2})$/.exec(v);
+      if (!m || +m[1] < 1 || +m[1] > 12) return 'Ngày hết hạn phải có dạng MM/YY';
+      if (+m[2] < NOW.year || (+m[2] === NOW.year && +m[1] < NOW.month)) return 'Thẻ đã hết hạn';
+      return '';
+    };
+    const rules = {
+      card_number: (v) => !v ? 'Số thẻ là bắt buộc' : !/^\d{16}$/.test(v) ? 'Số thẻ phải gồm 16 chữ số' : '',
+      card_holder: (v) => !v.trim() ? 'Tên chủ thẻ là bắt buộc' : '',
+      expiry: expiryError,
+      cvv: (v) => !v ? 'CVV là bắt buộc' : !/^\d{3,4}$/.test(v) ? 'CVV phải gồm 3 chữ số' : '',
+    };
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      let ok = true;
+      for (const [name, check] of Object.entries(rules)) {
+        const msg = check(document.getElementById(name).value);
+        document.getElementById(name + '-error').textContent = msg;
+        if (msg) ok = false;
+      }
+      document.getElementById('toast').style.display = ok ? 'block' : 'none';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo - Thêm người dùng</title>
+  <style>
+    body { font-family: sans-serif; max-width: 460px; margin: 60px auto; }
+    label { display: block; margin-top: 12px; }
+    input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+    .error { color: #c62828; font-size: 13px; min-height: 16px; }
+    .toast { margin-top: 16px; padding: 10px; background: #2e7d32; color: #fff; display: none; }
+    button { margin-top: 16px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <!-- Trang mẫu (trang quản trị).
+       Lỗi cài sẵn để demo NG: spec yêu cầu Số điện thoại gồm đúng 10 CHỮ SỐ nhưng trang chỉ kiểm tra độ dài 10. -->
+  <h2>Thêm người dùng</h2>
+  <form id="form" novalidate>
+    <label for="fullname">Họ tên</label>
+    <input id="fullname" name="fullname" placeholder="2-50 ký tự">
+    <div class="error" id="fullname-error"></div>
+
+    <label for="email">Email</label>
+    <input id="email" name="email" placeholder="user@company.com">
+    <div class="error" id="email-error"></div>
+
+    <label for="phone">Số điện thoại</label>
+    <input id="phone" name="phone" placeholder="10 chữ số">
+    <div class="error" id="phone-error"></div>
+
+    <label for="role">Vai trò</label>
+    <select id="role" name="role">
+      <option value="">-- Chọn vai trò --</option>
+      <option value="Admin">Admin</option>
+      <option value="Staff">Staff</option>
+      <option value="User">User</option>
+    </select>
+    <div class="error" id="role-error"></div>
+
+    <button type="submit">Lưu</button>
+  </form>
+  <div class="toast" id="toast" role="status">Thêm người dùng thành công!</div>
+
+  <script>
+    const rules = {
+      fullname: (v) => !v.trim() ? 'Họ tên là bắt buộc' : (v.trim().length < 2 || v.trim().length > 50) ? 'Họ tên dài 2-50 ký tự' : '',
+      email: (v) => !v ? 'Email là bắt buộc' : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? 'Email không đúng định dạng' : '',
+      phone: (v) => !v ? 'Số điện thoại là bắt buộc' : v.length !== 10 ? 'Số điện thoại phải có 10 số' : '',
+      role: (v) => !v ? 'Vui lòng chọn vai trò' : '',
+    };
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      let ok = true;
+      for (const [name, check] of Object.entries(rules)) {
+        const msg = check(document.getElementById(name).value);
+        document.getElementById(name + '-error').textContent = msg;
+        if (msg) ok = false;
+      }
+      document.getElementById('toast').style.display = ok ? 'block' : 'none';
+    });
+  </script>
+</body>
+</html>

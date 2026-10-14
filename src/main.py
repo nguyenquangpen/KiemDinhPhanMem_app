@@ -38,14 +38,22 @@ class ApplicationController:
         """Không có màn hình đăng nhập: tự đăng nhập server bằng tài khoản demo rồi mở thẳng màn hình chính."""
         logger.info("Running TestAgent application")
         if not asyncio.run(self.db.auto_login(DEMO_USERNAME, DEMO_PASSWORD)):
-            QMessageBox.critical(
+            reply = QMessageBox.question(
                 None,
                 "Không kết nối được server",
-                f"Không đăng nhập được vào server tại {API_ENDPOINT}.\n\n"
+                f"Không đăng nhập được vào server tại {API_ENDPOINT}.\n"
                 "Hãy kiểm tra server đã chạy (python main.py trong KiemDinhPhanMem_server) "
-                "và MongoDB đang bật.",
+                "và MongoDB đang bật.\n\n"
+                "Mở app ở chế độ offline để xem dữ liệu cục bộ?\n"
+                "(Sinh testcase, chạy testcase và đồng bộ cần server.)",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
             )
-            return False
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+            # Dữ liệu cục bộ gắn với user theo tên, không cần token
+            logger.warning("Server unavailable, starting in offline mode as '%s'", DEMO_USERNAME)
+            self.db._get_local_user(DEMO_USERNAME)
 
         self.main_window = MainWindow(self.db)
         if os.path.exists(self.icon_path):

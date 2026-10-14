@@ -694,11 +694,13 @@ class DataManager:
         """Get all projects from API or local storage."""
         logger.debug("Fetching all projects")
         try:
-            self.cursor.execute(
+            # Cursor riêng: hàm này chạy ở luồng nền trong khi giao diện vẫn dùng self.cursor
+            cur = self.conn.cursor()
+            cur.execute(
                 "SELECT * FROM projects WHERE user_id = ?",
                 (self.current_local_user_id,),
             )
-            project_rows = self.cursor.fetchall()
+            project_rows = cur.fetchall()
             projects = []
             for row in project_rows:
                 project_dict = dict(row)
@@ -1197,19 +1199,20 @@ class DataManager:
         logger.debug("Listing tasks for project: %s", project_id)
         tasks = []
         try:
-            self.cursor.execute(
+            cur = self.conn.cursor()  # cursor riêng, an toàn khi gọi từ luồng nền
+            cur.execute(
                 "SELECT * FROM tasks WHERE project_id = ?", (project_id,)
             )
-            rows = self.cursor.fetchall()
+            rows = cur.fetchall()
             for row in rows:
                 task_dict = dict(row)
                 specs_json = task_dict.pop("specs_json", "[]")
                 task_dict["items"] = json.loads(specs_json or "[]")
-                self.cursor.execute(
+                cur.execute(
                     "SELECT uuid, test_status FROM testcases WHERE task_uuid = ?",
                     (task_dict["uuid"],),
                 )
-                task_dict["test_cases"] = [dict(tc) for tc in self.cursor.fetchall()]
+                task_dict["test_cases"] = [dict(tc) for tc in cur.fetchall()]
                 tasks.append(task_dict)
             return tasks
         except sqlite3.Error as e:
