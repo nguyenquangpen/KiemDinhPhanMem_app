@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Quality Assurance",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "PyQt6>=6.4.0",
     "requests>=2.28.0",
