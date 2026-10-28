@@ -1,5 +1,9 @@
 # CWTestAgent – Ứng dụng desktop (KiemDinhPhanMem_app)
 
+> 🎬 **Video báo cáo:** https://drive.google.com/drive/folders/1qqU0hkcPZ4q4IaUL83ptLRUBaRkGKXFW?usp=sharing
+>
+> Link trên gồm cả **video trình chiếu slide báo cáo** và **video thuyết trình**.
+
 **Công cụ dùng AI hỗ trợ tester tự sinh testcase và tự chạy testcase cho ứng dụng web.**
 
 Đề tài môn *Đánh giá và kiểm định chất lượng phần mềm* · Sinh viên thực hiện: **Nguyễn Trần Quang**
