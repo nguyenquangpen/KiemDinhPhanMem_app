@@ -94,6 +94,9 @@ resources_rc.py
 # test db
 test_db.json
 agent_local_storage.db
+# SQLite journal + bản sao lưu do tools/seed_demo_data.py tạo
+agent_local_storage.db-journal
+agent_local_storage.db.bak-*
 
 # ui node_modules
 ui/node_modules/
